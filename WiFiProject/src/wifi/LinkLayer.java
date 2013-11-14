@@ -75,13 +75,27 @@ public class LinkLayer implements Dot11Interface {
       output.println("LinkLayer: Pretending to block on recv()");
       //data is in A.B.Q.
       recBlocQ = recThread.getRecABQ();
-      
+      //output.println(recBlocQ);
+      t.setBuf(BuildPacket.recData);
+      t.setDestAddr(BuildPacket.shtRecDestAdd);
+      t.setSourceAddr(BuildPacket.shtRecSrcAdd);
+      output.print("Data received from: " + BuildPacket.shtRecSrcAdd);
+      output.print("Tx starting from host " +BuildPacket.shtRecSrcAdd + " at local time " + theRF.clock());
+    //sleep for 5 seconds
+      try {
+		Thread.sleep(500);
+	} catch (InterruptedException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+      System.out.println("data can be called from above");
+      return BuildPacket.recData.length;
       //****
       //writes the incoming data and address information 
       //into the Transmission instance passed as argument
       //**
       
-      while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.
+      //while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.
       //return 0;
    }
 

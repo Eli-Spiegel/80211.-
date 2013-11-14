@@ -13,7 +13,7 @@ import rf.RF;
 public class Rthread implements Runnable {
 	private  byte[] recPac;
 	private  RF theRF;
-	private ArrayBlockingQueue <byte []> ACKablockQ;
+	private ArrayBlockingQueue <byte []> ACKablockQ = new ArrayBlockingQueue(10);
 	private short recDestAdd;
 	private short recSrcAdd;
 	private short recFrameType;
@@ -22,7 +22,7 @@ public class Rthread implements Runnable {
 	private byte[] recData;
 	private short recCRC;
 	private boolean isData = false;
-	private ArrayBlockingQueue <byte []> recABQ;
+	private ArrayBlockingQueue <byte []> recABQ = new ArrayBlockingQueue(10);
 	private short ourMAC;
 
 
@@ -66,12 +66,14 @@ public class Rthread implements Runnable {
 					recSrcAdd = BuildPacket.retSrcAd(recPac);
 					recSeqNum = BuildPacket.retSeqNum(recPac);
 					recData = BuildPacket.retRecData(recPac);
+					
+					System.out.println("Gathered incoming packet info from:" + recSrcAdd);
 
 					//check to see if the packet was for us
 					//turn compare each byte
 					if(recDestAdd == ourMAC){
 						//the packet is for us!
-
+						System.out.println("The packet is for us!");
 						//check what type of packet we are receiving
 						if(recFrameType == 0){
 							//data packet!
@@ -119,5 +121,6 @@ public class Rthread implements Runnable {
 	public ArrayBlockingQueue getRecABQ(){
 		return recABQ;
 	}
+
 
 }
