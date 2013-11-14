@@ -1,27 +1,72 @@
 package wifi;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 
 import com.sun.org.apache.xalan.internal.xsltc.dom.BitArray;
 
 public class BuildPacket {
-	//used for sequence number
-	static int buildcount=0;
+	public static String packet= null;
 	//16 ones to be added twice for crc value
 	static String crcVal = "0000000000000000";
-	public static String packet= null;
-	public BuildPacket( byte[] pac){
+	// used for sequence number
+	static int buildcount = 0;
+	//holds the received frame type
+	static byte[] recFrameType;
+	//holds the received retry bits
+	static byte[] recRetry;
+	//holds the received seq number
+	static byte[] recSeqNum;
+	//holds the received destination add
+	static byte[] recDestAdd;
+	//holds the received source add
+	static byte[] recSrcAdd;
+	//holds the received data in a byte array
+	static byte[] recData;
+	//holds the received crc 
+	static byte[] recCRC;
+	//the following are shorts to be used elsewhere
+	static short shtRecData;
+	static short shtRecFrameType;
+	static short shtRecRetry;
+	static short shtRecSeqNum;
+	static short shtRecDestAdd;
+	static short shtRecSrcAdd;
+	static short shtRecCRC;
+
+	/**
+	 * Constructor for taking apart a packet received from Wifi
+	 * 
+	 * @param pac
+	 */
+	public BuildPacket(byte[] pac) {
+		//dont use this. just call the individual methods
+
 		shred(pac);
-		
+
 	}
-	public  void BuildPacket(byte[] data, short dest, short ourMac){
-		
-		
-		
+
+	/**
+	 * Constructor for building a packet to send to Wifi
+	 * 
+	 * @param data
+	 * @param dest
+	 * @param ourMac
+	 */
+	public BuildPacket(byte[] data, short dest, short ourMac) {
+
 	}
-	
-	public static byte[] build(byte[] data, short dest, short ourMac) {
+
+	/**
+	 * Takes given data and addresses and builds a sendable packet
+	 * 
+	 * @param data
+	 * @param dest
+	 * @param ourMac
+	 * @return
+	 */
+public static byte[] build(byte[] data, short dest, short ourMac) {
 		
 		//make seq length 12 bits
 		String seq = Integer.toBinaryString(buildcount);
@@ -30,7 +75,7 @@ public class BuildPacket {
 		if(length > 11){
 			//sequence num is too great
 			//set to zero 
-			seq = "000000000000";
+			seq = "0000";
 			length = seq.length();
 		}
 			while (length < 12)
@@ -50,168 +95,261 @@ public class BuildPacket {
 		byte[] crc = bitshift(crcval);
 	
 		//the first concatenated byte array 
-		byte[] packetFin = new byte[packet.length + destpac.length+mac.length+crc.length+crc.length+data.length];
+		byte[] packetFin = new byte[packet.length +packet.length+ destpac.length+mac.length+crc.length+crc.length+data.length];
 		//add the bytes containing the frame type, retry, and seq num
 		System.arraycopy(packet, 0, packetFin, 0, packet.length);
+		System.arraycopy(packet, 0, packetFin, packet.length, packet.length);
 		//add the destination byte
-		System.arraycopy(destpac, 0, packetFin, packet.length, destpac.length);
+		System.arraycopy(destpac, 0, packetFin, packet.length+packet.length, destpac.length);
 		//add the source address
-		System.arraycopy(mac, 0, packetFin, packet.length+destpac.length, mac.length);
+		System.arraycopy(mac, 0, packetFin, packet.length+packet.length+destpac.length, mac.length);
 		//add the data
-		System.arraycopy(data, 0, packetFin, packet.length, data.length);
+		System.arraycopy(data, 0, packetFin, packet.length+packet.length+destpac.length+mac.length, data.length);
 		//add the first crc
-		System.arraycopy(crc, 0, packetFin, packet.length+destpac.length+mac.length, crc.length);
+		System.arraycopy(crc, 0, packetFin, packet.length+packet.length+destpac.length+mac.length+data.length, crc.length);
 		//add the second crc
-		System.arraycopy(crc, 0, packetFin, packet.length+destpac.length+mac.length+crc.length, crc.length);
+		System.arraycopy(crc, 0, packetFin, packet.length+packet.length+destpac.length+mac.length+data.length+crc.length, crc.length);
 		System.out.println("it is doing this /n");
 		System.out.println(Arrays.toString(packetFin));
 		
 		
-		
-		/*
-		 *  
-		//the second concatenated byte array (adds the source address)
-		byte[] packetCatb = new byte[packetCata.length + mac.length];
-		//add the first concatenated packet
-		System.arraycopy(packetCata, 0, packetCatb, 0, packetCata.length);
-		//add the source address
-		System.arraycopy(mac, 0, packetCatb, packetCata.length, mac.length);
-		
-		//the third concatenated byte array (adds the data)
-		byte[] packetCatc = new byte[packetCatb.length + data.length];
-		//add the second concatenated packet
-		System.arraycopy(packetCatb, 0, packetCatc, 0, packetCatb.length);
-		//add the data to the final byte array
-		System.arraycopy(data, 0, packetCatc, packetCatb.length, data.length);
-		
-		//the fourth concatenated byte array (add the CRC)
-		byte[] packetCatd = new byte[packetCatc.length + crc.length];
-		//add the third concatenated packet
-		System.arraycopy(packetCatc, 0, packetCatd, 0, packetCatc.length);
-		//add the crc to the end
-		System.arraycopy(crc, 0, packetCatd, packetCatc.length, crc.length);
-		
-		//the final concatenated byte array (add the second CRC)
-		byte[] packetFin = new byte[packetCatd.length + crc.length];
-		//add the third concatenated packet
-		System.arraycopy(packetCatd, 0, packetFin, 0, packetCatd.length);
-		//add the crc to the end
-		System.arraycopy(crc, 0, packetFin, packetCatd.length, crc.length);
-		
-		//the final packet will contain the frame type, retry, seq num, destAddr,
-		//srcAddr, data, and crc
-		*/
-		
 		buildcount++;
 		return packetFin;
 		
-		
-	}
-	public BitArray shred(byte[] pa){
-		int index=0;
-		int i =0;
-		byte b= pa[index];
-		if(i<4){
-		while( i < 3)
-		{
-		    b = (byte) (b >>> 1);
-		    if(b!=0 && i==2){
-		    	shredack();
-		    	}
-		    else{
-		    	if(b!=0){
-		    		System.out.println("fail!");
-		    	}
-		    }
-		    
-		    System.out.println("B: " + b);
-		    i++;
-		}
-		}else{
-		int retry =  b = (byte) (b >>> 1);
-		i++;
-		while( i <16 ){
-			if(i ==7)
-			{
-				b=pa[index +1];
-			}
-			 int sequence = (byte) (b >>> 1);
-			 i++;
-		}
-		}
-		b = pa[index +1];
-		//for dest address
-		while(i<64){
-			if (i%8 == 0){
-				b = pa[index +1];
-			}
-			int destAdd = (byte) (b >>> 1);
-		}
-		//for source address
-		while(i<96){
-			if (i%8 == 0){
-				b = pa[index +1];
-			}
-			int srcAdd = (byte) (b >>> 1);
-		}
-		
-		//Now need keep data
-		while(index < pa.length-4){
-			//store
-			if (i%8 == 0){
-				b = pa[index +1];
-			}
-			int data = (byte) (b >>> 1);
-		}
-		//Now get check sum
-		while(index < pa.length)
-		{
-			//store
-			if (i%8 == 0){
-				b = pa[index +1];
-			}
-			int crc = (byte) (b >>> 1);
-		}
-		
-		return null;
-		
-	}
-	private void shredack() {
-		// TODO Auto-generated method stub
-		
 	}
 
-		/*
-		 * private static byte[] bitshift(short a)
-	{
-		byte msb= (byte)(a>>> 8);  
-		byte lsb = (byte)a;
-		byte [] packet= {msb, lsb};
-	
-		
-		
-		return packet;
+/**
+ * 
+ * @param theShort
+ * @return
+ */
+public static byte[] bitshift(short theShort ) {
+byte[] ret = new byte[2];
+ret[1] = (byte)(theShort & 0xff);
+ret[0]= (byte)((theShort >> 8)& 0xff);
+return ret;
+	 }
+
+	/**
+	 * Saves each piece of the received packet
+	 * into separate byte arrays.
+	 * These can be accessed through helper methods.
+	 * @param pa received packet
+	 */
+	public static void shred(byte[] pa) {
+		int index = 0;
+		int i = 0;
+		byte b = pa[index];
+
+		//go till end of frameType bits
+		if (i < 3) {
+			int frameTypeCounter = 0;
+			while (i < 3) {
+				// looking at the frame type
+				b = (byte) (b >>> 1);
+				//save bits 0-2 in byte array
+				recFrameType[frameTypeCounter] = b;
+				//if (b != 0 && i == 2) {
+				// then ACK?
+				//shredack();
+				//} else {
+				if (b != 0) {
+					System.out.println("Not receiving data. Other info or corrupt.");
+				}
+				//}
+
+				System.out.println("B: " + b);
+				i++;
+				frameTypeCounter = frameTypeCounter +1;
+			}
 		}
-		 */
+		
+		if (i==3){   //at retry bit
+			b = (byte) (b >>> 1);
+			//save the retry bit. There will only be one
+			recRetry[0] = b;
+			i++;
+		}
+		//used in saving the SeqNum bits
+		int seqCounter = 0;
+		//go to end of SeqNum bits
+		while (i < 15) {
+			//we need to got to next spot in byte array
+			if (i == 8) {
+				//next position in byte array
+				b = pa[index + 1];
+			}
+			recSeqNum[seqCounter] = (byte) (b >>> 1);
+			//to step through received packet
+			i++;
+			//so we can add the next byte into the recSeqNum array
+			seqCounter = seqCounter +1;
+		}
+
+		//go to next byte in array (we have parsed 16-bits so far)
+		b = pa[index + 1];
+		int destAddCounter = 0;
+		// for dest address from 16-31 bits
+		while (i < 32) {
+			//check if we need to move to next byte
+			if (i % 8 == 0) {
+				//move to next byte
+				b = pa[index + 1];
+			}
+			recDestAdd[destAddCounter] = (byte) (b >>> 1);
+			destAddCounter = destAddCounter +1;
+			i = i + 1;
+		}
+		int srcAddCounter = 0;
+		// for source address 32-47 bits
+		while (i < 48) {
+			//check if we need to move to next byte
+			if (i % 8 == 0) {
+				//move to next byte
+				b = pa[index + 1];
+			}
+			recSrcAdd[srcAddCounter] = (byte) (b >>> 1);
+			srcAddCounter = srcAddCounter + 1;
+			i = i + 1;
+		}
+
+		int dataAddCounter = 0;
+		// Now need keep data (the remaining bytes-4 for CRC)
+		while (index < pa.length - 4) {
+			//do we need to move to next byte
+			if (i % 8 == 0) {
+				//move to next byte
+				b = pa[index + 1];
+			}
+			//save the received data
+			recData[dataAddCounter] = (byte) (b >>> 1);
+			dataAddCounter = dataAddCounter +1;
+			i = i+1;
+		}
+
+		int crcAddCounter = 0;
+		// Now get check sum
+		while (index < pa.length) {
+			//do we need to move to next byte
+			if (i % 8 == 0) {
+				//move to next byte
+				b = pa[index + 1];
+			}
+			recCRC[crcAddCounter] = (byte) (b >>> 1);
+			crcAddCounter = crcAddCounter + 1;
+			i = i + 1;
+		}
+	}
 
 
-	public static byte[] bitshift(short theShort ) {
-		 String bytess = "";
-		 // test each bit (all 32 of them) for( int i = 31; i >= 0; i-- ) {
-		 for( int i = 16; i >= 0; i-- ) {
-			 if( (theShort & (1 << i)) != 0 ) {
-			 bytess += "1"; // the ith bit is set
-			 } else {
-			 bytess += "0"; // the ith bit is NOT set
-			 }
-			 }
-		 short a = Short.parseShort(bytess, 2);
-		 ByteBuffer bytes = ByteBuffer.allocate(2).putShort(a);
+	/**
+	 * Gets the frame type of a received packet
+	 * @return
+	 */
+	public static short retFrameType(byte[] recData) {
+		
+		
+		return shtRecFrameType;
+	}
 
-		 byte[] array = bytes.array();
-			 return array;
-		 }
+	/**
+	 * 
+	 * @return
+	 */
+	public static short retRetry(byte[] recData){
+		
+		return shtRecRetry;
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	public static short retSeqNum(byte[] recData){
+		
+		return shtRecSeqNum;
+	}
+
+	/**
+	 * 
+	 * @param
+	 * @return
+	 */
+	public static short retDestAd(byte[] recData){
+		//dest address is two bytes in
+		int byteCounter = 2;
+		int addCounter = 0;
+		while(byteCounter < 5){
+			//recDestAdd[addCounter] = recData[byteCounter];
+			byte by = recData[byteCounter];
+			recDestAdd[addCounter] = by;
+			byteCounter = byteCounter +1;
+			addCounter = addCounter +1;
+		}
+		
+		shtRecData = ByteBuffer.wrap(recDestAdd).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		
+		return shtRecData;
+	}
+
+	/**
+	 * 
+	 * @param
+	 * @return
+	 */
+	public static short retSrcAd(byte[] recData){
+		//src address is four bytes in
+		int byteCounter = 4;
+		int addCounter = 0;
+		while(byteCounter < 7){
+			byte by = recData[byteCounter];
+			recSrcAdd[addCounter] = by;
+			byteCounter = byteCounter +1;
+			addCounter = addCounter +1;
+		}
+		
+		shtRecSrcAdd = ByteBuffer.wrap(recSrcAdd).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		return shtRecSrcAdd;
+	}
+
+	/**
+	 * @param 
+	 * @return
+	 */
+	public static byte[] retRecData(byte[] recDataP){
+		//data is in bytes 6 till end -4
+		int byteCounter = 6; //start at beginning of data
+		int addCounter = 0;
+		while(byteCounter < (recData.length-4)){
+			byte by = recData[byteCounter];
+			recData[addCounter] = by;
+			byteCounter = byteCounter +1;
+			addCounter = addCounter +1;
+		}
+		
+		//shtRecData = ByteBuffer.wrap(recData).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		return recData;
+	}
+
+	/**
+	 * 
+	 * @param
+	 * @return
+	 */
+	public static short retCrc(byte[] recData){
+		//CRC is in last 4 bytes
+		int byteCounter = (recData.length - 4); //start at beginning of data
+		int addCounter = 0;
+		while(byteCounter < (recData.length)){
+			byte by = recData[byteCounter];
+			recCRC[addCounter] = by;
+			byteCounter = byteCounter +1;
+			addCounter = addCounter +1;
+		}
+		shtRecCRC = ByteBuffer.wrap(recCRC).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		return shtRecCRC;
+	}
+
 }
-
 
 
