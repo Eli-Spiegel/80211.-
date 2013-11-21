@@ -1,7 +1,5 @@
 package wifi;
 
-import java.util.concurrent.ArrayBlockingQueue;
-
 /**
  * This class contains the information available from an incoming transmission.  In C, the
  * recvfrom() call returns information about the source and destination address through
@@ -14,16 +12,9 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 
 public class Transmission {
-	//The source address of the packet being sent
-   private static short sourceAddr;
-   //The desination address of the packet being sent
-   private static short destAddr;
-   //They byte array to hold the data to be sent
+   private short sourceAddr;
+   private short destAddr;
    private byte[] buf;
-   //An instance of the sending thread
-   private static Sthread sendThread;
-   //An array blocking queue to hold the packets sent
-   private static ArrayBlockingQueue <byte []> theablockQ = new ArrayBlockingQueue(10);
    
 
    /**
@@ -33,24 +24,9 @@ public class Transmission {
     * @param buf         The data carried by the transmission
     */
    public Transmission(short sourceAddr, short destAddr, byte[] buf) {
-      //this.sourceAddr = sourceAddr;
-      //this.destAddr = destAddr;
+      this.sourceAddr = sourceAddr;
+      this.destAddr = destAddr;
       this.buf = buf;
-      //build packet and add to array blocking queue
-      try {
-		theablockQ.put(BuildPacket.build(buf, destAddr, sourceAddr));
-	} catch (InterruptedException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
-   }
-   
-   public static void giveSthreadABQ(Sthread thread, ArrayBlockingQueue abq, short destAddress, short srcAddress)
-   {
-	   sendThread = thread;
-	   theablockQ = abq;
-	   destAddr = destAddress;
-	   sourceAddr = srcAddress;
    }
    
    /**
@@ -101,3 +77,4 @@ public class Transmission {
       this.sourceAddr = sourceAddr;
    }
 }
+

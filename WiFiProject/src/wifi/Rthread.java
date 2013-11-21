@@ -24,6 +24,7 @@ public class Rthread implements Runnable {
 	private boolean isData = false;
 	private ArrayBlockingQueue <byte []> recABQ = new ArrayBlockingQueue(10);
 	private short ourMAC;
+	boolean dataInQ = false;
 
 
 	/**
@@ -35,7 +36,8 @@ public class Rthread implements Runnable {
 	 */
 	public Rthread(byte[]packet, short ourAdd, RF theRF, ArrayBlockingQueue abq)
 	{
-		ACKablockQ = abq;
+		//put recieved data here
+		recABQ = abq;
 		ourMAC = ourAdd;
 		this.theRF = theRF;
 		recPac = packet;
@@ -102,6 +104,7 @@ public class Rthread implements Runnable {
 						if(isData = true){
 							//add the data to the ABQ
 							recABQ.add(recData);
+							dataInQ = true;
 						}
 
 						//reset booleans
@@ -115,12 +118,68 @@ public class Rthread implements Runnable {
 	}
 
 	/**
-	 * A getter for the Link Layer
+	 * A getter for the Link Layer return the first
+	 * byte array in the received Array Blocking Queue 
+	 * and removes it from the front.
 	 * @return
 	 */
-	public ArrayBlockingQueue getRecABQ(){
-		return recABQ;
+	public byte[] getRecABQ(){
+		byte[] toPass = null;
+		try {
+			toPass = recABQ.take();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		
+		return toPass;
 	}
 
+	/**
+	 * 
+	 * @return
+	 */
+	public boolean dataWaitinginQ(){
+		
+		if(dataInQ){
+			dataInQ = false;//will be empty once removed
+			return true;
+		}
+		
+		return false;
+	}
 
+	/**
+	 * 
+	 * @return
+	 */
+	public byte[] getData(){
+		//
+		try {
+			return recABQ.take();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public short getDestAdd(){
+		return recDestAdd;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public short getSrcAdd(){
+		return recSrcAdd;
+	}
+	
 }

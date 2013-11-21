@@ -20,6 +20,8 @@ public class LinkLayer implements Dot11Interface {
    private ArrayBlockingQueue <byte []> sendBlocQ = new ArrayBlockingQueue(10);
    ///Array Blocking Queue to hold the packets wanted by the next layer
    private ArrayBlockingQueue <byte []> recBlocQ = new ArrayBlockingQueue(10);
+   //Array Blocking Queue with unpacked packets to be called from above
+   private ArrayBlockingQueue <byte[]> readyBlocQ = new ArrayBlockingQueue(10);
    //to hold the destination address of a packet
    private short destAdd;
    
@@ -56,14 +58,20 @@ public class LinkLayer implements Dot11Interface {
     * @return int number of bytes sent
     */
    public int send(short dest, byte[] data, int len) {
-       output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-       try {
-           sendBlocQ.put(BuildPacket.build(data, dest, ourMAC));
-       } catch (InterruptedException e) {
-           // TODO Auto-generated catch block
-           e.printStackTrace();
-       }
-       return len;
+
+	   //only try to build if there is something to send
+	   if(dest != 0){
+		   output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+
+		   try {
+			   sendBlocQ.put(BuildPacket.build(data, dest, ourMAC));
+		   } catch (InterruptedException e) {
+			   // TODO Auto-generated catch block
+			   e.printStackTrace();
+		   }
+	   }
+	   return len;
+
    }
 
    /**
@@ -72,31 +80,40 @@ public class LinkLayer implements Dot11Interface {
     * @return int number of bytes recieved, -1 on error
     */
    public int recv(Transmission t) {
-      output.println("LinkLayer: Pretending to block on recv()");
-      //data is in A.B.Q.
-      recBlocQ = recThread.getRecABQ();
-      //output.println(recBlocQ);
-      t.setBuf(BuildPacket.recData);
-      t.setDestAddr(BuildPacket.shtRecDestAdd);
-      t.setSourceAddr(BuildPacket.shtRecSrcAdd);
-      output.print("Data received from: " + BuildPacket.shtRecSrcAdd);
-      output.print("Tx starting from host " +BuildPacket.shtRecSrcAdd + " at local time " + theRF.clock());
-    //sleep for 5 seconds
-      try {
-		Thread.sleep(500);
-	} catch (InterruptedException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
-      System.out.println("data can be called from above");
-      return BuildPacket.recData.length;
-      //****
-      //writes the incoming data and address information 
-      //into the Transmission instance passed as argument
-      //**
-      
-      //while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.
-      //return 0;
+	   output.println("LinkLayer: Pretending to block on recv()");
+	   //data is in A.B.Q.
+	   
+	   output.println("Recieve in LinkLAYER????");
+
+	  
+		   //output.println(recBlocQ);
+		   t.setBuf(recThread.getData());
+		   t.setDestAddr(recThread.getDestAdd());
+		   t.setSourceAddr(recThread.getSrcAdd());
+		   
+	   //sleep for 5 seconds
+	   //try {
+	  /* Thread.sleep(500);
+	   } catch (InterruptedException e) {
+		   // TODO Auto-generated catch block
+		   e.printStackTrace();
+	   }*/
+	   System.out.println("data can be called from above");
+	   
+	   //"block" until data is received
+	   while(t.getDestAddr() == 0);
+	   output.println("Data received from: " + t.getSourceAddr());
+	   output.println("Tx starting from host " + t.getSourceAddr() + " at local time " + theRF.clock());
+	   output.println("From " + String.valueOf(t.getSourceAddr()) + ": " + t.getBuf().toString());
+	   
+	   return BuildPacket.recData.length;
+	   //****
+	   //writes the incoming data and address information 
+	   //into the Transmission instance passed as argument
+	   //**
+
+	   //while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.
+	   //return 0;
    }
 
    /**
