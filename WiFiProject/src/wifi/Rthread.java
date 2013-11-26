@@ -1,6 +1,7 @@
 package wifi;
 
 import java.lang.reflect.Array;
+import java.math.BigInteger;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import rf.RF;
@@ -22,10 +23,18 @@ public class Rthread implements Runnable {
 	private byte[] recData;
 	private short recCRC;
 	private boolean isData = false;
+	//static to be used in send thread
+	public static long rcvTime;
 	private ArrayBlockingQueue <byte []> recABQ = new ArrayBlockingQueue(10);
 	private short ourMAC;
 	boolean dataInQ = false;
+	public short ackshort = 8192;
+	
 
+	//need an array for addresses and sequence numbers
+			//the order of packets interchanging with each address
+			//increments on receive new acceptable packet
+			//add to array if receive from new address
 
 	/**
 	 * A second constructor for the receiving thread
@@ -41,6 +50,7 @@ public class Rthread implements Runnable {
 		ourMAC = ourAdd;
 		this.theRF = theRF;
 		recPac = packet;
+		rcvTime = 0;
 	}
 
 
@@ -59,14 +69,18 @@ public class Rthread implements Runnable {
 				//check to see if something was received
 				if (recPac.length != 0){
 					//then something was received and we need to figure out what it is
+					rcvTime = theRF.clock();
 					//BuildPacket bp = new BuildPacket(recPac);
 					//"shred" it to get all the pieces of the packet
 					//bp.shred(recPac);
 					//get some of the pieces from the packet
-					recFrameType = BuildPacket.retFrameType(recPac);
+					
+					//each time this is called it starts with all false booleans for frame types 
+					recFrameType = BuildPacket.retFrameType(recPac); 
+					recRetry = BuildPacket.retRetry(recPac);
+					recSeqNum = BuildPacket.retSeqNum(recPac);
 					recDestAdd = BuildPacket.retDestAd(recPac);
 					recSrcAdd = BuildPacket.retSrcAd(recPac);
-					recSeqNum = BuildPacket.retSeqNum(recPac);
 					recData = BuildPacket.retRecData(recPac);
 					
 					System.out.println("Gathered incoming packet info from:" + recSrcAdd);
@@ -77,25 +91,55 @@ public class Rthread implements Runnable {
 						//the packet is for us!
 						System.out.println("The packet is for us!");
 						//check what type of packet we are receiving
-						if(recFrameType == 0){
+						if(BuildPacket.rcvData){
 							//data packet!
 							isData = true;
 							System.out.println("Received a data packet.");
+							
+							byte[] theackpacket = new byte[10];
+							theackpacket= BuildPacket.sixbytes(recPac);
+							
+							 byte[] ackthing = BuildPacket.bitshift(ackshort);
+							 byte[] theolddest= new byte[2];
+							 byte[] theoldsrc= new byte[2];
+							
+							 theackpacket[0]=ackthing[0];
+							 theackpacket[1]=ackthing[1];
+							 theolddest[0]=theackpacket[2];
+							theolddest[1]= theackpacket[3];
+							 theoldsrc[0]=theackpacket[4];
+							theoldsrc[1]= theackpacket[5];
+							theackpacket[2]=theoldsrc[0];
+							theackpacket[3]=theoldsrc[1];
+							theackpacket[4]=theolddest[0];
+							theackpacket[5]=theolddest[1];
+							
+							 System.out.println("it should be sending an ack");
+							 if(theRF.getIdleTime()<100){
+								 
+							 theRF.transmit(theackpacket);
+							 System.out.println("it should have sent an ack");
+							 BigInteger bi = new BigInteger(theackpacket);
+							 System.out.println(bi.toString(2));
+							 System.out.println("the address that it is from is "+BuildPacket.retSrcAd(theackpacket)+ "   the Adress it is to "+BuildPacket.retDestAd(theackpacket));
+							 
+
+
 						}
-						if(recFrameType == 1){
+						if(BuildPacket.rcvACK){
 							//ACK packet!
 							//it is an ACK
 							System.out.println("Received an ACK packet.");
 							//NEED TO CLEAR OUT ARRAY BLOCKING QUEUE using SeqNum
 						}
-						if(recFrameType == 2){
+						if(BuildPacket.rcvBeacon){
 							//it is a Beacon packet
 							System.out.println("Received a Beacon packet.");
 						}
-						if(recFrameType == 4){
+						if(BuildPacket.rcvCTS){
 							System.out.println("Received a CTS packet.");
 						}
-						if(recFrameType == 5){
+						if(BuildPacket.rcvRTS){
 							//it is an RTS
 							System.out.println("Received a RTS packet.");
 						}
@@ -108,13 +152,15 @@ public class Rthread implements Runnable {
 						}
 
 						//reset booleans
-						isData=false;	
+						isData = false;
 					}
 
 				}
 			}
+			//reset for next recieved packet
+			rcvTime = 0;
 
-		}
+			}}
 	}
 
 	/**

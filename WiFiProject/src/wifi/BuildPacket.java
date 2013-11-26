@@ -5,6 +5,7 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 
+
 import com.sun.org.apache.xalan.internal.xsltc.dom.BitArray;
 
 public class BuildPacket {
@@ -14,11 +15,11 @@ public class BuildPacket {
 	// used for sequence number
 	static int buildcount = 0;
 	//holds the received frame type
-	static byte[] recFrameType = new byte [3];
+	static byte[] recFrameType = new byte [2];
 	//holds the received retry bits
-	static byte[] recRetry = new byte [1];
+	static byte[] recRetry = new byte [2];
 	//holds the received seq number
-	static byte[] recSeqNum = new byte [12];
+	static byte[] recSeqNum = new byte [2];
 	//holds the received destination add
 	static byte[] recDestAdd = new byte [2];
 	//holds the received source add
@@ -35,6 +36,14 @@ public class BuildPacket {
 	static short shtRecDestAdd;
 	static short shtRecSrcAdd;
 	static short shtRecCRC;
+	static boolean rcvData;
+	static boolean rcvACK;
+	static boolean rcvBeacon;
+	static boolean rcvCTS;
+	static boolean rcvRTS;
+	static boolean rcvRetry;
+	
+	static ByteBuffer firstByte = ByteBuffer.allocate(1);
 
 	/**
 	 * Constructor for taking apart a packet received from Wifi
@@ -124,22 +133,68 @@ public static byte[] build(byte[] data, short dest, short ourMac) {
  * @return
  */
 public static byte[] bitshift(short theShort ) {
-byte[] ret = new byte[2];
-ret[1] = (byte)(theShort & 0xff);
-ret[0]= (byte)((theShort >> 8)& 0xff);
-return ret;
-	 }
+	byte[] ret = new byte[2];
+	ret[1] = (byte)(theShort & 0xff);
+	ret[0]= (byte)((theShort >> 8)& 0xff);
+	return ret;
+}
 
 	
 
 
 	/**
-	 * Gets the frame type of a received packet
+	 * Gets the frame type of a received packet.
+	 * The short value of the entire first byte is returned
+	 * Data = =
+	 * ACK = 32
+	 * Beacon = 64
+	 * CTS = 128
+	 * RTS = 160
+	 * Set booleans for isData, isACK, etc.
 	 * @return
 	 */
 	public static short retFrameType(byte[] recData) {
+	
+		//make sure the booleans are set to zero
+		rcvData = false;
+		rcvACK = false;
+		rcvBeacon = false;
+		rcvCTS = false;
+		rcvRTS = false;
+		recFrameType[0] = recData[0];
+		recFrameType[1] = recData[1];
+		//short that holds the value of the first byte
+		shtRecFrameType = ByteBuffer.wrap(recFrameType).getShort();
+		//AND with 11100000, short value of 75344
+		shtRecFrameType = (short)(shtRecFrameType & (short)75344);
+		//should be holding the frame type followed by 5 zeros
 		
-		
+		//Data: 00000000 = 0
+		if(shtRecFrameType == 0){
+			//then it is a data packet
+			rcvData = true;
+		}
+		//ACK = 00100000 = 32
+		if(shtRecFrameType == 32){
+			//then it is an ACK packet
+			rcvACK = true;
+		}
+		//Beacon = 01000000 = 64
+		if(shtRecFrameType == 64){
+			//then it is a Beacon
+			rcvBeacon = true;
+		}
+		//CTS = 10000000 = 128
+		if(shtRecFrameType == 128){
+			//then it is a CTS
+			rcvCTS = true;
+		}
+		//RTS = 10100000 = 160
+		if(shtRecFrameType == 160){
+			//then it is a RTS
+			rcvRTS = true;
+		}
+		System.out.println("The FrameType is : " + shtRecFrameType);
 		return shtRecFrameType;
 	}
 
@@ -148,6 +203,22 @@ return ret;
 	 * @return
 	 */
 	public static short retRetry(byte[] recData){
+		//make sure the boolean is set to zero
+		rcvRetry = false;
+		recRetry[0] = recData[0];
+		recRetry[1] = recData[1];
+		//short that holds the value of the first byte
+		shtRecRetry = ByteBuffer.wrap(recRetry).getShort();
+		//AND with 00010000, short value of 4096
+		shtRecRetry = (short)(shtRecRetry & (short)(4096));
+		//should be holding the retry bit, with 3 zeros in front and 4 behind
+		
+		System.out.println("The Retry Bit is : " + shtRecRetry);
+		
+		//set the boolean
+		if(shtRecRetry > 0){
+			rcvRetry = true;
+		}
 		
 		return shtRecRetry;
 	}
@@ -157,7 +228,15 @@ return ret;
 	 * @return
 	 */
 	public static short retSeqNum(byte[] recData){
-		
+		//move the first two bytes into the array
+		recSeqNum[0] = recData[0];
+		recSeqNum[1] = recData[1];
+		//short that holds the value of the first byte
+		shtRecSeqNum = ByteBuffer.wrap(recSeqNum).getShort();
+		//AND with 0000111111111111, (short value = 4095)
+		shtRecSeqNum = (short)(shtRecSeqNum & (short)4095);
+		//should be holding the sequence number, 4 zeros in front
+		System.out.println("The Sequence Number is: " + shtRecSeqNum);
 		return shtRecSeqNum;
 	}
 
@@ -175,7 +254,7 @@ return ret;
 		
 		return shtRecData;
 	}
-
+	
 	/**
 	 * 
 	 * @param
@@ -230,7 +309,26 @@ return ret;
 		shtRecCRC = ByteBuffer.wrap(recCRC).order(ByteOrder.LITTLE_ENDIAN).getShort();
 		return shtRecCRC;
 	}
+	
+	public static byte[] sixbytes(byte[] recData)
+	{
+		byte[] ret = new byte [6];
+		 ret[0]= recData[0];
+		 ret[1]=recData[1];
+		 ret[2]=recData[2];
+		 ret[3]=recData[3];
+		 ret[4]= recData[4];
+		 ret[5]=recData[5];
+	
+		 
+		 return ret;
+		 
+	}
+
+
+
 
 }
+
 
 

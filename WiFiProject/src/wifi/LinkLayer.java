@@ -18,14 +18,17 @@ public class LinkLayer implements Dot11Interface {
    private PrintWriter output; // The output stream we'll write to
    //Array Blocking Queue to hold packets being sent
    private ArrayBlockingQueue <byte []> sendBlocQ = new ArrayBlockingQueue(10);
-   ///Array Blocking Queue to hold the packets wanted by the next layer
+   ///Array Blocking Queue to hold the packets received from various sources
    private ArrayBlockingQueue <byte []> recBlocQ = new ArrayBlockingQueue(10);
    //Array Blocking Queue with unpacked packets to be called from above
    private ArrayBlockingQueue <byte[]> readyBlocQ = new ArrayBlockingQueue(10);
    //to hold the destination address of a packet
    private short destAdd;
    
+   
+   //our threads that will send and receive
    public Rthread recThread;
+   public Sthread sendThread;
    
    /**
     * Constructor takes a MAC address and the PrintWriter to which our output will
@@ -37,12 +40,12 @@ public class LinkLayer implements Dot11Interface {
       this.ourMAC = ourMAC;
       this.output = output;      
       theRF = new RF(null, null);
-      //make an instance of the send tread
-      Sthread sendthread = new Sthread(theRF, sendBlocQ);
+      //make an instance of the send tread with array of packets to be sent
+      sendThread = new Sthread(theRF, sendBlocQ);
       //start the send thread
-      (new Thread(sendthread)).start();
+      (new Thread(sendThread)).start();
       
-      //make an instance of the receiving thread
+      //make an instance of the receiving thread with array of received packets?
       recThread = new Rthread(null, ourMAC, theRF, recBlocQ);
       //start the receiving thread
       (new Thread(recThread)).start();
@@ -58,18 +61,20 @@ public class LinkLayer implements Dot11Interface {
     * @return int number of bytes sent
     */
    public int send(short dest, byte[] data, int len) {
-
+	   //has an ACK been received?
+	   //boolean rcvACK = recThread.isACK;
 	   //only try to build if there is something to send
 	   if(dest != 0){
 		   output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-
-		   try {
-			   sendBlocQ.put(BuildPacket.build(data, dest, ourMAC));
-		   } catch (InterruptedException e) {
-			   // TODO Auto-generated catch block
-			   e.printStackTrace();
+	   //keep sending
+			   try {
+				   sendBlocQ.put(BuildPacket.build(data, dest, ourMAC));
+			   } catch (InterruptedException e) {
+				   // TODO Auto-generated catch block
+				   e.printStackTrace();
+			   }
 		   }
-	   }
+		   
 	   return len;
 
    }
