@@ -99,25 +99,25 @@ public static byte[] build(byte[] data, short dest, short ourMac) {
 		
 		
 		  byte[] packet = bitshift(pac);
-		byte[] destpac = bitshift(ourMac);
-		byte[] mac = bitshift(dest); 
+		byte[] destpac = bitshift(dest);
+		byte[] mac = bitshift(ourMac); 
 		byte[] crc = bitshift(crcval);
 	
 		//the first concatenated byte array 
 		byte[] packetFin = new byte[packet.length +packet.length+ destpac.length+mac.length+crc.length+crc.length+data.length];
 		//add the bytes containing the frame type, retry, and seq num
-		System.arraycopy(packet, 0, packetFin, 0, packet.length);
+		
 		System.arraycopy(packet, 0, packetFin, packet.length, packet.length);
 		//add the destination byte
-		System.arraycopy(destpac, 0, packetFin, packet.length+packet.length, destpac.length);
+		System.arraycopy(destpac, 0, packetFin, packet.length, destpac.length);
 		//add the source address
-		System.arraycopy(mac, 0, packetFin, packet.length+packet.length+destpac.length, mac.length);
+		System.arraycopy(mac, 0, packetFin,packet.length+destpac.length, mac.length);
 		//add the data
-		System.arraycopy(data, 0, packetFin, packet.length+packet.length+destpac.length+mac.length, data.length);
+		System.arraycopy(data, 0, packetFin, packet.length+destpac.length+mac.length, data.length);
 		//add the first crc
-		System.arraycopy(crc, 0, packetFin, packet.length+packet.length+destpac.length+mac.length+data.length, crc.length);
+		System.arraycopy(crc, 0, packetFin,packet.length+destpac.length+mac.length+data.length, crc.length);
 		//add the second crc
-		System.arraycopy(crc, 0, packetFin, packet.length+packet.length+destpac.length+mac.length+data.length+crc.length, crc.length);
+		System.arraycopy(crc, 0, packetFin, packet.length+destpac.length+mac.length+data.length+crc.length, crc.length);
 		System.out.println("it is doing this /n");
 		System.out.println(Arrays.toString(packetFin));
 		
@@ -166,7 +166,7 @@ public static byte[] bitshift(short theShort ) {
 		//short that holds the value of the first byte
 		shtRecFrameType = ByteBuffer.wrap(recFrameType).getShort();
 		//AND with 11100000, short value of 75344
-		shtRecFrameType = (short)(shtRecFrameType & (short)75344);
+		shtRecFrameType = (short)(shtRecFrameType & 0xE000);
 		//should be holding the frame type followed by 5 zeros
 		
 		//Data: 00000000 = 0
@@ -247,10 +247,10 @@ public static byte[] bitshift(short theShort ) {
 	 */
 	public static short retDestAd(byte[] recData){
 		//dest address is two bytes in
-		recDestAdd[0] = recData[3];
-		recDestAdd[1] = recData[2];
+		recDestAdd[0] = recData[2];
+		recDestAdd[1] = recData[3];
 
-		shtRecData = ByteBuffer.wrap(recDestAdd).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		shtRecData = ByteBuffer.wrap(recDestAdd).getShort();
 		
 		return shtRecData;
 	}
@@ -262,10 +262,10 @@ public static byte[] bitshift(short theShort ) {
 	 */
 	public static short retSrcAd(byte[] recData){
 		//src address is four bytes in
-		recSrcAdd[0] = recData[5];
-		recSrcAdd[1] = recData[4];
+		recSrcAdd[0] = recData[4];
+		recSrcAdd[1] = recData[5];
 	
-		shtRecSrcAdd = ByteBuffer.wrap(recSrcAdd).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		shtRecSrcAdd = ByteBuffer.wrap(recSrcAdd).getShort();
 		return shtRecSrcAdd;
 	}
 
@@ -283,10 +283,6 @@ public static byte[] bitshift(short theShort ) {
 			byteCounter = byteCounter +1;
 			addCounter = addCounter +1;
 		}
-		
-		//add counter*8 is the number of bits received.
-		
-		//shtRecData = ByteBuffer.wrap(recData).order(ByteOrder.LITTLE_ENDIAN).getShort();
 		
 		return recData;
 	}
@@ -306,7 +302,7 @@ public static byte[] bitshift(short theShort ) {
 			byteCounter = byteCounter +1;
 			addCounter = addCounter +1;
 		}
-		shtRecCRC = ByteBuffer.wrap(recCRC).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		shtRecCRC = ByteBuffer.wrap(recCRC).getShort();
 		return shtRecCRC;
 	}
 	
