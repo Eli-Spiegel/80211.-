@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 import com.sun.org.apache.xalan.internal.xsltc.dom.BitArray;
@@ -36,12 +37,12 @@ public class BuildPacket {
 	static short shtRecDestAdd;
 	static short shtRecSrcAdd;
 	static short shtRecCRC;
-	static boolean rcvData;
-	static boolean rcvACK;
-	static boolean rcvBeacon;
-	static boolean rcvCTS;
-	static boolean rcvRTS;
-	static boolean rcvRetry;
+	static AtomicBoolean rcvData = new AtomicBoolean(false);
+	static AtomicBoolean rcvACK = new AtomicBoolean(false);
+	static AtomicBoolean rcvBeacon = new AtomicBoolean(false);
+	static AtomicBoolean rcvCTS = new AtomicBoolean(false);
+	static AtomicBoolean rcvRTS = new AtomicBoolean(false);
+	static AtomicBoolean rcvRetry = new AtomicBoolean(false);
 	
 	static ByteBuffer firstByte = ByteBuffer.allocate(1);
 
@@ -99,25 +100,25 @@ public static byte[] build(byte[] data, short dest, short ourMac) {
 		
 		
 		  byte[] packet = bitshift(pac);
-		byte[] destpac = bitshift(ourMac);
-		byte[] mac = bitshift(dest); 
+		byte[] destpac = bitshift(dest);
+		byte[] mac = bitshift(ourMac); 
 		byte[] crc = bitshift(crcval);
 	
 		//the first concatenated byte array 
 		byte[] packetFin = new byte[packet.length +packet.length+ destpac.length+mac.length+crc.length+crc.length+data.length];
 		//add the bytes containing the frame type, retry, and seq num
-		System.arraycopy(packet, 0, packetFin, 0, packet.length);
+		
 		System.arraycopy(packet, 0, packetFin, packet.length, packet.length);
 		//add the destination byte
-		System.arraycopy(destpac, 0, packetFin, packet.length+packet.length, destpac.length);
+		System.arraycopy(destpac, 0, packetFin, packet.length, destpac.length);
 		//add the source address
-		System.arraycopy(mac, 0, packetFin, packet.length+packet.length+destpac.length, mac.length);
+		System.arraycopy(mac, 0, packetFin,packet.length+destpac.length, mac.length);
 		//add the data
-		System.arraycopy(data, 0, packetFin, packet.length+packet.length+destpac.length+mac.length, data.length);
+		System.arraycopy(data, 0, packetFin, packet.length+destpac.length+mac.length, data.length);
 		//add the first crc
-		System.arraycopy(crc, 0, packetFin, packet.length+packet.length+destpac.length+mac.length+data.length, crc.length);
+		System.arraycopy(crc, 0, packetFin,packet.length+destpac.length+mac.length+data.length, crc.length);
 		//add the second crc
-		System.arraycopy(crc, 0, packetFin, packet.length+packet.length+destpac.length+mac.length+data.length+crc.length, crc.length);
+		System.arraycopy(crc, 0, packetFin, packet.length+destpac.length+mac.length+data.length+crc.length, crc.length);
 		System.out.println("it is doing this /n");
 		System.out.println(Arrays.toString(packetFin));
 		
@@ -156,43 +157,43 @@ public static byte[] bitshift(short theShort ) {
 	public static short retFrameType(byte[] recData) {
 	
 		//make sure the booleans are set to zero
-		rcvData = false;
-		rcvACK = false;
-		rcvBeacon = false;
-		rcvCTS = false;
-		rcvRTS = false;
+		rcvData.getAndSet(false);
+		rcvACK.getAndSet(false);
+		rcvBeacon.getAndSet(false);
+		rcvCTS.getAndSet(false);
+		rcvRTS.getAndSet(false);
 		recFrameType[0] = recData[0];
 		recFrameType[1] = recData[1];
 		//short that holds the value of the first byte
 		shtRecFrameType = ByteBuffer.wrap(recFrameType).getShort();
-		//AND with 11100000, short value of 75344 and hex value of E000
+
 		shtRecFrameType = (short)(shtRecFrameType & 0xE000);
 		//should be holding the frame type followed by 5 zeros
 		
 		//Data: 00000000 = 0
 		if(shtRecFrameType == 0){
 			//then it is a data packet
-			rcvData = true;
+			rcvData.getAndSet(true);
 		}
 		//ACK = 00100000 = 32
 		if(shtRecFrameType == 32){
 			//then it is an ACK packet
-			rcvACK = true;
+			rcvACK.getAndSet(true);
 		}
 		//Beacon = 01000000 = 64
 		if(shtRecFrameType == 64){
 			//then it is a Beacon
-			rcvBeacon = true;
+			rcvBeacon.getAndSet(true);
 		}
 		//CTS = 10000000 = 128
 		if(shtRecFrameType == 128){
 			//then it is a CTS
-			rcvCTS = true;
+			rcvCTS.getAndSet(true);
 		}
 		//RTS = 10100000 = 160
 		if(shtRecFrameType == 160){
 			//then it is a RTS
-			rcvRTS = true;
+			rcvRTS.getAndSet(true);
 		}
 		System.out.println("The FrameType is : " + shtRecFrameType);
 		return shtRecFrameType;
@@ -204,7 +205,7 @@ public static byte[] bitshift(short theShort ) {
 	 */
 	public static short retRetry(byte[] recData){
 		//make sure the boolean is set to zero
-		rcvRetry = false;
+		rcvRetry.getAndSet(false);
 		recRetry[0] = recData[0];
 		recRetry[1] = recData[1];
 		//short that holds the value of the first byte
@@ -217,7 +218,7 @@ public static byte[] bitshift(short theShort ) {
 		
 		//set the boolean
 		if(shtRecRetry > 0){
-			rcvRetry = true;
+			rcvRetry.getAndSet(true);
 		}
 		
 		return shtRecRetry;
@@ -250,7 +251,11 @@ public static byte[] bitshift(short theShort ) {
 		recDestAdd[0] = recData[2];
 		recDestAdd[1] = recData[3];
 
+
 		shtRecDestAdd = ByteBuffer.wrap(recDestAdd).getShort();
+
+		shtRecData = ByteBuffer.wrap(recDestAdd).getShort();
+
 		
 		return shtRecDestAdd;
 	}
@@ -283,10 +288,6 @@ public static byte[] bitshift(short theShort ) {
 			byteCounter = byteCounter +1;
 			addCounter = addCounter +1;
 		}
-		
-		//add counter*8 is the number of bits received.
-		
-		//shtRecData = ByteBuffer.wrap(recData).order(ByteOrder.LITTLE_ENDIAN).getShort();
 		
 		return recData;
 	}

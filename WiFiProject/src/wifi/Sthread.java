@@ -96,7 +96,7 @@ public class Sthread implements Runnable {
 					, and haven't hit our retry limit,
 					keep re-sending the packet at intervals
 				 */
-				while(!BuildPacket.rcvACK && !atRetryLimit){
+				while(!(BuildPacket.rcvACK.get()) && !atRetryLimit){
 					
 					System.out.println("haven't received ACK, timed out, or hit retry limit.");
 					
@@ -234,7 +234,7 @@ public class Sthread implements Runnable {
 					}
 				}
 				//should have received and ACK
-				if(BuildPacket.rcvACK){
+				if(BuildPacket.rcvACK.get()){
 					System.out.println("Packet was ACKed!!!!");
 				}
 

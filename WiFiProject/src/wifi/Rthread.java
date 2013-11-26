@@ -85,14 +85,15 @@ public class Rthread implements Runnable {
 					
 					System.out.println("the recDestAdd is: "+recDestAdd+" and the ourMAC is: " +ourMAC);
 					System.out.println("Gathered incoming packet info from:" + recSrcAdd);
-
+					System.out.println("the recDestAdd is "+recDestAdd +" and ourMAC is "+ourMAC);
 					//check to see if the packet was for us
 					//turn compare each byte
+					
 					if(recDestAdd == ourMAC){
 						//the packet is for us!
 						System.out.println("The packet is for us!");
 						//check what type of packet we are receiving
-						if(BuildPacket.rcvData){
+						if(BuildPacket.rcvData.get()){
 							//data packet!
 							isData = true;
 							System.out.println("Received a data packet.");
@@ -127,20 +128,20 @@ public class Rthread implements Runnable {
 
 
 						}
-						if(BuildPacket.rcvACK){
+						if(BuildPacket.rcvACK.get()){
 							//ACK packet!
 							//it is an ACK
 							System.out.println("Received an ACK packet.");
 							//NEED TO CLEAR OUT ARRAY BLOCKING QUEUE using SeqNum
 						}
-						if(BuildPacket.rcvBeacon){
+						if(BuildPacket.rcvBeacon.get()){
 							//it is a Beacon packet
 							System.out.println("Received a Beacon packet.");
 						}
-						if(BuildPacket.rcvCTS){
+						if(BuildPacket.rcvCTS.get()){
 							System.out.println("Received a CTS packet.");
 						}
-						if(BuildPacket.rcvRTS){
+						if(BuildPacket.rcvRTS.get()){
 							//it is an RTS
 							System.out.println("Received a RTS packet.");
 						}
