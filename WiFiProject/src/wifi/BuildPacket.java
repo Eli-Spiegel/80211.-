@@ -165,8 +165,8 @@ public static byte[] bitshift(short theShort ) {
 		recFrameType[1] = recData[1];
 		//short that holds the value of the first byte
 		shtRecFrameType = ByteBuffer.wrap(recFrameType).getShort();
-		//AND with 11100000, short value of 75344
-		shtRecFrameType = (short)(shtRecFrameType & (short)75344);
+		//AND with 11100000, short value of 75344 and hex value of E000
+		shtRecFrameType = (short)(shtRecFrameType & 0xE000);
 		//should be holding the frame type followed by 5 zeros
 		
 		//Data: 00000000 = 0
@@ -247,12 +247,12 @@ public static byte[] bitshift(short theShort ) {
 	 */
 	public static short retDestAd(byte[] recData){
 		//dest address is two bytes in
-		recDestAdd[0] = recData[3];
-		recDestAdd[1] = recData[2];
+		recDestAdd[0] = recData[2];
+		recDestAdd[1] = recData[3];
 
-		shtRecData = ByteBuffer.wrap(recDestAdd).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		shtRecDestAdd = ByteBuffer.wrap(recDestAdd).getShort();
 		
-		return shtRecData;
+		return shtRecDestAdd;
 	}
 	
 	/**
@@ -262,10 +262,10 @@ public static byte[] bitshift(short theShort ) {
 	 */
 	public static short retSrcAd(byte[] recData){
 		//src address is four bytes in
-		recSrcAdd[0] = recData[5];
-		recSrcAdd[1] = recData[4];
+		recSrcAdd[0] = recData[4];
+		recSrcAdd[1] = recData[5];
 	
-		shtRecSrcAdd = ByteBuffer.wrap(recSrcAdd).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		shtRecSrcAdd = ByteBuffer.wrap(recSrcAdd).getShort();
 		return shtRecSrcAdd;
 	}
 
@@ -306,7 +306,7 @@ public static byte[] bitshift(short theShort ) {
 			byteCounter = byteCounter +1;
 			addCounter = addCounter +1;
 		}
-		shtRecCRC = ByteBuffer.wrap(recCRC).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		shtRecCRC = ByteBuffer.wrap(recCRC).getShort();
 		return shtRecCRC;
 	}
 	

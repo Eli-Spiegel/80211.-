@@ -83,6 +83,7 @@ public class Rthread implements Runnable {
 					recSrcAdd = BuildPacket.retSrcAd(recPac);
 					recData = BuildPacket.retRecData(recPac);
 					
+					System.out.println("the recDestAdd is: "+recDestAdd+" and the ourMAC is: " +ourMAC);
 					System.out.println("Gathered incoming packet info from:" + recSrcAdd);
 
 					//check to see if the packet was for us
