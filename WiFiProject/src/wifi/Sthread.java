@@ -15,30 +15,33 @@ import rf.RF;
  *
  */
 public class Sthread implements Runnable {
-    
+
 	private  byte[] packet;
 	private  RF theRF;
-	//array for packets being sent (and not acked?)
+	//array for packets to be sent
 	private ArrayBlockingQueue <byte []> ablockQSent;
-	public static boolean timedOut = false;
+	//array that will hold sent packets waiting for an ACK
+	private ArrayBlockingQueue <byte[]> abqSendAck = new ArrayBlockingQueue(10);
+	//public static boolean timedOut = false;
 	private double slotTime;
 	private double expBackOff;
 	private double difs;
 	private double sifs;
 	private int retryLimit;
-	private int numRetry;
+	private int numRetry = 0;
 	private int maxPacketLength;//in bytes
-	private long sendTime;
+	private long sendTime = 0;
+	private long rcvTime;
 	private long timeoutLimit;
-	
+
 	//need an array for addresses and sequence numbers
-		//the order of packets interchanging with each address
-		//increments on sending new packets
-	
+	//the order of packets interchanging with each address
+	//increments on sending new packets
+
 	//need an array to hold sent packets until they've been acked
-		//order my seq num and address
-    
-	
+	//order my seq num and address
+
+
 	/**
 	 * Another constructor for the sending thread.
 	 *
@@ -57,14 +60,13 @@ public class Sthread implements Runnable {
 		slotTime = theRF.aSlotTime;
 		expBackOff = slotTime;//**UPDATE THIS**
 		retryLimit = theRF.dot11RetryLimit;
-		numRetry = 0;
 		maxPacketLength = theRF.aMPDUMaximumLength;
 		sendTime = 0;
 		timeoutLimit = 500;//**want this to be 0.5 seconds
 	}
-    
-    
-    
+
+
+
 	/**
 	 * After an initial line of ouptut, the run() method here just loops forever,
 	 * printing periodically as it goes.
@@ -73,100 +75,98 @@ public class Sthread implements Runnable {
 		System.out.println("send is alive and well");
 
 		boolean busy = false; //for checking ability to send
-		boolean atRetryLimit = false; //if we have retried too many times
+		boolean notACKed = true;
 
 
-		while(true){//do we still need this?	
-			//System.out.println("Just in the this vague while loop.");
-			
+		while(true){
+
+			if(!ablockQSent.isEmpty()){
+				//something wanting to be sent
+				try {
+					//add it to the array that will keep trying to resend
+					//until it has been acked
+					abqSendAck.add(ablockQSent.take());
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
+
 			//as long as there is something to send
-			while(!ablockQSent.isEmpty()){
-				
-				/*long timeWaiting = theRF.clock()-sendTime;//how long have we been waiting?
-				if(timeWaiting >= timeoutLimit){
-					//we've been waiting too long!
-					System.out.println("Reached Timeout Limit!");
-					timedOut = true;
-				}*/
+			while(!abqSendAck.isEmpty()){
+
+
 
 				/*
-					as long as we haven't received and ACK, haven't
-					timed out
-						add (&& !timedOut) to while conditions
-					, and haven't hit our retry limit,
+					as long as we haven't received an ACK, haven't
+					timed out, and haven't hit our retry limit,
 					keep re-sending the packet at intervals
 				 */
-				while(!(BuildPacket.rcvACK.get()) && !atRetryLimit){
+				while(numRetry<retryLimit && notACKed){	
 					
-					System.out.println("haven't received ACK, timed out, or hit retry limit.");
-					
-					//keep sending
-
-					if(theRF.inUse()){
-						busy = true;
-						System.out.println("Medium is NOT idle.");
-
-						while(busy){
-							System.out.println("Wait until current transmission ends.");
-							while(theRF.inUse()){
-								//wait until current transmission ends	
-								System.out.println("Waiting for transmission to end.");
-							}
-							//not transmitting right now
-							busy = false;
-							//wait DIFS
-							if(theRF.getIdleTime() > difs)
-							{
-								System.out.println("Waiting DIFS");
-								//Check if open
-								if(theRF.inUse()){
-									//the RF layer is busy
-									busy = true;
-									System.out.println("Medium is NOT still idle.");
-								}	
-							}
+					//do we need to flip the retry bit
+					if(numRetry==1){
+						byte[] wholePacket = new byte[2048];
+						try {
+							wholePacket = abqSendAck.take();
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
 						}
-						//The channel is open now
-						numRetry = numRetry + 1; //count this retry
-						//have we retried too many times?
-						if(numRetry >= retryLimit){
-							System.out.println("Last retry attempt.");
-							//yes we have
-							atRetryLimit = true;
-						}
-						//wait exponential back-off time
-						if(theRF.getIdleTime() > (expBackOff*numRetry)){
-							System.out.println("Wait exponential backoff time while medium idle.");
-							//transmit
-							try {
-								//send the data
-								theRF.transmit(ablockQSent.take());
-								//record when it was sent
-								sendTime = theRF.clock();
-								System.out.println("Transmit Frame0: Sent Packet");
-							}
+						byte firstByte = wholePacket[0];
+						//AND the first byte to flip the retry bit
+						firstByte = (byte) (firstByte | (1 << 4)); 
 
-							catch (InterruptedException e) {
-								// TODO Auto-generated catch block
-								System.out.println(e);
-								//e.printStackTrace();
-
-							}
-						}
+						//put this new byte back into the packet
+						wholePacket [0] = firstByte;
+						//put this packet back into the ArrayBlockingQueue to be sent
+						abqSendAck.add(wholePacket);
 					}
-					//Medium IS idle
 
-					//wait IFS, Still idle?
-					//wait DIFS
-					if(theRF.getIdleTime() > difs)
-					{
-						System.out.println("Waiting DIFS");
+					while(((sendTime !=0 )&&(theRF.clock()-sendTime) < timeoutLimit) && notACKed){
+						//check if we received an ACK
+						if(BuildPacket.rcvACK.get()){
+							System.out.println("received the ACK in our send thread.");
+							//check that the ACK was for the packet we just sent
+							short ackAdd = BuildPacket.shtRecSrcAdd;
 
-						//Check if open
+							if(ackAdd == BuildPacket.shtSendDestAdd){
+								//then it is for the right packet
+								//check that the sequence number matches
+								short ackSeqNum = BuildPacket.shtRecSeqNum;
+								short sentSeqNum = BuildPacket.shtSendSeqNum;
+								if(ackSeqNum == sentSeqNum){
+									//the packet is for us and 
+									//is responding to the packet we just sent
+									notACKed = false;
+									System.out.println("SendThread recognizes ack.");
+									//stop the time
+									rcvTime = theRF.clock();
+									//remove the acked packet from the ABQ holding it
+									try {
+										abqSendAck.take();
+										numRetry = 0;//reset retry
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								}
+								//not the right seqNum
+							}
+							//not an ack for the right packet?
+						}
+
+					}
+					
+					
+
+					if(notACKed){
+						//keep sending
+
 						if(theRF.inUse()){
-							//the RF layer is busy
 							busy = true;
-							System.out.println("Medium is NOT idle anymore.");
+							System.out.println("Medium is NOT idle.");
 
 							while(busy){
 								System.out.println("Wait until current transmission ends.");
@@ -189,67 +189,121 @@ public class Sthread implements Runnable {
 								}
 							}
 							//The channel is open now
-							numRetry = numRetry + 1; //count this retry
-							//have we retried too many times?
-							if(numRetry >= retryLimit){
-								System.out.println("Last retry attempt.");
-								//yes we have
-								atRetryLimit = true;
-							}
+
+							System.out.println("From SendThread(B) - Number of Retrys = " + numRetry);
+
 							//wait exponential back-off time
 							if(theRF.getIdleTime() > (expBackOff*numRetry)){
 								System.out.println("Wait exponential backoff time while medium idle.");
-								//transmit
-								try {
+								//send the data
+								theRF.transmit(abqSendAck.element());
+								numRetry = numRetry + 1; //count this retry
+								//record when it was sent
+								sendTime = theRF.clock();
+								System.out.println("Transmit Frame0: Sent Packet");
+							}
+						}
+
+						//Medium IS idle
+
+						//wait IFS, Still idle?
+						//wait DIFS
+						if(theRF.getIdleTime() > difs)
+						{
+							System.out.println("Waiting DIFS");
+
+							//Check if open
+							if(theRF.inUse()){
+								//the RF layer is busy
+								busy = true;
+								System.out.println("Medium is NOT idle anymore.");
+
+								while(busy){
+									System.out.println("Wait until current transmission ends.");
+									while(theRF.inUse()){
+										//wait until current transmission ends	
+										System.out.println("Waiting for transmission to end.");
+									}
+									//not transmitting right now
+									busy = false;
+									//wait DIFS
+									if(theRF.getIdleTime() > difs)
+									{
+										System.out.println("Waiting DIFS");
+										//Check if open
+										if(theRF.inUse()){
+											//the RF layer is busy
+											busy = true;
+											System.out.println("Medium is NOT still idle.");
+										}	
+									}
+								}
+								//The channel is open now
+
+								System.out.println("From SendThread(C) - Number of Retrys = " + numRetry);
+
+								//wait exponential back-off time
+								if(theRF.getIdleTime() > (expBackOff*numRetry)){
+									System.out.println("Wait exponential backoff time while medium idle.");
+
 									//send the data
-									theRF.transmit(ablockQSent.take());
+									theRF.transmit(abqSendAck.element());
+									numRetry = numRetry + 1; //count this retry
 									//record when it was sent
 									sendTime = theRF.clock();
 									System.out.println("Transmit Frame1: Sent Packet");
-								}
 
-								catch (InterruptedException e) {
-									// TODO Auto-generated catch block
-									System.out.println(e);
-									//e.printStackTrace();
 
 								}
 							}
-						}
-						System.out.println("The Medium is still idle.");
-						try {
+
+							System.out.println("The Medium is still idle.");
 							//send the data
-							theRF.transmit(ablockQSent.take());
+							theRF.transmit(abqSendAck.element());
 							//record when it was sent
 							sendTime = theRF.clock();
 							System.out.println("Transmit Frame2: Sent Packet");
+							numRetry = numRetry + 1;
 						}
 
-						catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							System.out.println(e);
-							//e.printStackTrace();
-
-						}
+						
 					}
+					System.out.println("Number of Retrys in Send: " + numRetry);
 				}
-				//should have received and ACK
+
+				//check if we have hit the retry limit
+				if(numRetry >= retryLimit){
+					System.out.println("Hit retry limit.");
+					//we need to stop trying to send this packet
+					//and remove it from the ArrayBlockingQueue
+
+					try {
+						abqSendAck.take();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					//then we should reset the numRetry
+					numRetry = 0;
+					//we should also stop our timer
+					sendTime=0;
+				}
+
+				//check to see if we received and ACK
 				if(BuildPacket.rcvACK.get()){
 					System.out.println("Packet was ACKed!!!!");
 				}
-
-				//should have either sent the packet or timed out
-				/*if(timedOut){
-					System.out.println("TIMEDOUT!!!!");
-				}*/
-				
-				//reset the retry count
-				numRetry = 0;	
-				
 			}
-			
+
 		}
 
+
 	}
+
+
+
 }
+
+
+
 

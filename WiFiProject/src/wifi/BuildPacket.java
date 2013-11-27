@@ -3,6 +3,7 @@ package wifi;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,7 +15,7 @@ public class BuildPacket {
 	//16 ones to be added twice for crc value
 	static String crcVal = "0000000000000000";
 	// used for sequence number
-	static int buildcount = 0;
+	static short buildcount = 0;
 	//holds the received frame type
 	static byte[] recFrameType = new byte [2];
 	//holds the received retry bits
@@ -37,6 +38,8 @@ public class BuildPacket {
 	static short shtRecDestAdd;
 	static short shtRecSrcAdd;
 	static short shtRecCRC;
+	static short shtSendDestAdd;
+	static short shtSendSeqNum;
 	static AtomicBoolean rcvData = new AtomicBoolean(false);
 	static AtomicBoolean rcvACK = new AtomicBoolean(false);
 	static AtomicBoolean rcvBeacon = new AtomicBoolean(false);
@@ -45,7 +48,7 @@ public class BuildPacket {
 	static AtomicBoolean rcvRetry = new AtomicBoolean(false);
 	
 	static ByteBuffer firstByte = ByteBuffer.allocate(1);
-
+	private static HashMap<Short,Short> theSTable = new HashMap<Short,Short>();
 	/**
 	 * Constructor for taking apart a packet received from Wifi
 	 * 
@@ -77,29 +80,26 @@ public class BuildPacket {
 	 * @return
 	 */
 public static byte[] build(byte[] data, short dest, short ourMac) {
-		
-		//make seq length 12 bits
-		String seq = Integer.toBinaryString(buildcount);
-		int length = seq.length();
-		//add the sequence number and fill the rest in with zeros
-		if(length > 11){
-			//sequence num is too great
-			//set to zero 
-			seq = "0000";
-			length = seq.length();
+	
+		shtSendDestAdd = dest;
+		if( !theSTable.containsKey(dest))
+		{
+			theSTable.put(dest, (short)0);
 		}
-			while (length < 12)
-			{
-				seq = "0" + seq;
-				length = length +1;
-			}
-		//adds "000" for data type and "0" for retry	
-		seq= "0000"+seq;
-		short pac = Short.parseShort(seq,2);
+		buildcount= (Short) theSTable.get(dest);
+
+
+
+	
+		//add the sequence number and fill the rest in with zeros
+		if(buildcount >= 4095){
+			buildcount =0;
+		}
 		short crcval= Short.parseShort(crcVal, 2);
+		shtSendSeqNum = buildcount;
 		
 		
-		  byte[] packet = bitshift(pac);
+		byte[] packet = bitshift(buildcount);
 		byte[] destpac = bitshift(dest);
 		byte[] mac = bitshift(ourMac); 
 		byte[] crc = bitshift(crcval);
@@ -108,28 +108,30 @@ public static byte[] build(byte[] data, short dest, short ourMac) {
 		byte[] packetFin = new byte[packet.length +packet.length+ destpac.length+mac.length+crc.length+crc.length+data.length];
 		//add the bytes containing the frame type, retry, and seq num
 		
-		System.arraycopy(packet, 0, packetFin, packet.length, packet.length);
+		System.arraycopy(packet, 0, packetFin, 0, packet.length);
 		//add the destination byte
-		System.arraycopy(destpac, 0, packetFin, packet.length, destpac.length);
+		System.arraycopy(destpac, 0, packetFin, 2, destpac.length);
 		//add the source address
-		System.arraycopy(mac, 0, packetFin,packet.length+destpac.length, mac.length);
+		System.arraycopy(mac, 0, packetFin,4, mac.length);
 		//add the data
-		System.arraycopy(data, 0, packetFin, packet.length+destpac.length+mac.length, data.length);
+		System.arraycopy(data, 0, packetFin, 6, data.length);
 		//add the first crc
-		System.arraycopy(crc, 0, packetFin,packet.length+destpac.length+mac.length+data.length, crc.length);
+		System.arraycopy(crc, 0, packetFin, 6 + data.length, crc.length);
 		//add the second crc
-		System.arraycopy(crc, 0, packetFin, packet.length+destpac.length+mac.length+data.length+crc.length, crc.length);
+		System.arraycopy(crc, 0, packetFin, 6 + data.length + 2, crc.length);
 		System.out.println("it is doing this /n");
 		System.out.println(Arrays.toString(packetFin));
 		
 		
+		theSTable.remove(dest);
 		buildcount++;
+		theSTable.put(dest, buildcount);
 		return packetFin;
 		
 	}
 
 /**
- * 
+ * Used for sequence number
  * @param theShort
  * @return
  */
@@ -168,30 +170,30 @@ public static byte[] bitshift(short theShort ) {
 		shtRecFrameType = ByteBuffer.wrap(recFrameType).getShort();
 
 		shtRecFrameType = (short)(shtRecFrameType & 0xE000);
-		//should be holding the frame type followed by 5 zeros
+		//should be holding the frame type followed by 13 zeros
 		
 		//Data: 00000000 = 0
-		if(shtRecFrameType == 0){
+		if(shtRecFrameType == (short)0){
 			//then it is a data packet
 			rcvData.getAndSet(true);
 		}
-		//ACK = 00100000 = 32
-		if(shtRecFrameType == 32){
+		//ACK =001000000000000000 =8192
+		if(shtRecFrameType == (short)8192){
 			//then it is an ACK packet
 			rcvACK.getAndSet(true);
 		}
-		//Beacon = 01000000 = 64
-		if(shtRecFrameType == 64){
+		//Beacon = 0100000000000000 = 16384
+		if(shtRecFrameType == (short)16384){
 			//then it is a Beacon
 			rcvBeacon.getAndSet(true);
 		}
-		//CTS = 10000000 = 128
-		if(shtRecFrameType == 128){
+		//CTS = 10000000000000000 = 32768
+		if(shtRecFrameType == (short)32768){
 			//then it is a CTS
 			rcvCTS.getAndSet(true);
 		}
-		//RTS = 10100000 = 160
-		if(shtRecFrameType == 160){
+		//RTS = 1010000000000000 = 40960
+		if(shtRecFrameType == (short)40960){
 			//then it is a RTS
 			rcvRTS.getAndSet(true);
 		}
@@ -325,7 +327,6 @@ public static byte[] bitshift(short theShort ) {
 		 return ret;
 		 
 	}
-
 
 
 

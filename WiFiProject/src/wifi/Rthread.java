@@ -2,6 +2,7 @@ package wifi;
 
 import java.lang.reflect.Array;
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import rf.RF;
@@ -29,6 +30,7 @@ public class Rthread implements Runnable {
 	private short ourMAC;
 	boolean dataInQ = false;
 	public short ackshort = 8192;
+	private HashMap<Short,Short> theRTable= new HashMap<Short,Short>();
 	
 
 	//need an array for addresses and sequence numbers
@@ -75,33 +77,53 @@ public class Rthread implements Runnable {
 					//bp.shred(recPac);
 					//get some of the pieces from the packet
 					
+					//check if it is for us
+					recDestAdd = BuildPacket.retDestAd(recPac);
+					recSrcAdd = BuildPacket.retSrcAd(recPac);
+					System.out.println("Gathered incoming packet info from:" + recSrcAdd);
+					
+					if(recDestAdd == ourMAC){
+						
 					//each time this is called it starts with all false booleans for frame types 
 					recFrameType = BuildPacket.retFrameType(recPac); 
 					recRetry = BuildPacket.retRetry(recPac);
 					recSeqNum = BuildPacket.retSeqNum(recPac);
-					recDestAdd = BuildPacket.retDestAd(recPac);
-					recSrcAdd = BuildPacket.retSrcAd(recPac);
 					recData = BuildPacket.retRecData(recPac);
 					
 					System.out.println("the recDestAdd is: "+recDestAdd+" and the ourMAC is: " +ourMAC);
-					System.out.println("Gathered incoming packet info from:" + recSrcAdd);
-					System.out.println("the recDestAdd is "+recDestAdd +" and ourMAC is "+ourMAC);
+					
 					//check to see if the packet was for us
 					//turn compare each byte
 					
-					if(recDestAdd == ourMAC){
+					
 						//the packet is for us!
 						System.out.println("The packet is for us!");
 						//check what type of packet we are receiving
+						//BuildPacket.rcvData.getAndSet(false);
 						if(BuildPacket.rcvData.get()){
 							//data packet!
 							isData = true;
 							System.out.println("Received a data packet.");
+								if(!theRTable.containsKey(recSrcAdd)||theRTable.get(recSrcAdd) < recSeqNum||theRTable.get(recSrcAdd)>4090&&recSrcAdd>100){
+								
+								if(!theRTable.containsKey(recSrcAdd))
+								{
+									theRTable.put(recSrcAdd, (short) 0);
+								}
+								
+								if(!(theRTable.get(recSrcAdd)==recSeqNum-1)||recSeqNum!=0)
+								{
+									System.out.println("There is a gap in the sequence numbers");
+								}
+
+
+
 							
 							byte[] theackpacket = new byte[10];
 							theackpacket= BuildPacket.sixbytes(recPac);
 							
 							 byte[] ackthing = BuildPacket.bitshift(ackshort);
+							 ackthing[0]=(byte)(ackthing[0] |(1<<5));
 							 byte[] theolddest= new byte[2];
 							 byte[] theoldsrc= new byte[2];
 							
@@ -124,7 +146,16 @@ public class Rthread implements Runnable {
 							 BigInteger bi = new BigInteger(theackpacket);
 							 System.out.println(bi.toString(2));
 							 System.out.println("the address that it is from is "+BuildPacket.retSrcAd(theackpacket)+ "   the Adress it is to "+BuildPacket.retDestAd(theackpacket));
-							 
+							 if(recRetry==0)
+							 {
+								 short temp1 =theRTable.get(recSrcAdd);
+								 theRTable.remove(recSrcAdd);
+								  
+								 theRTable.put(recSrcAdd,(short) (temp1+1) );
+							 }
+
+
+
 
 
 						}
@@ -162,7 +193,9 @@ public class Rthread implements Runnable {
 			//reset for next recieved packet
 			rcvTime = 0;
 
-			}}
+			}
+			}
+		}
 	}
 
 	/**
