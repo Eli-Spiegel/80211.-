@@ -155,9 +155,6 @@ public class Rthread implements Runnable {
 							 }
 
 
-
-
-
 						}
 						if(BuildPacket.rcvACK.get()){
 							//ACK packet!

@@ -5,6 +5,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import rf.RF;
@@ -24,7 +25,7 @@ public class Sthread implements Runnable {
 	private ArrayBlockingQueue <byte[]> abqSendAck = new ArrayBlockingQueue(10);
 	//public static boolean timedOut = false;
 	private double slotTime;
-	private double expBackOff;
+	private int expBackOff;
 	private double difs;
 	private double sifs;
 	private int retryLimit;
@@ -33,6 +34,9 @@ public class Sthread implements Runnable {
 	private long sendTime = 0;
 	private long rcvTime;
 	private long timeoutLimit;
+	private Random randExpoBack = new Random();
+	private int minCWin;
+	private int maxCWin;
 
 	//need an array for addresses and sequence numbers
 	//the order of packets interchanging with each address
@@ -58,11 +62,13 @@ public class Sthread implements Runnable {
 		difs = 0.500;//is this right?
 		sifs = theRF.aSIFSTime;
 		slotTime = theRF.aSlotTime;
-		expBackOff = slotTime;//**UPDATE THIS**
 		retryLimit = theRF.dot11RetryLimit;
 		maxPacketLength = theRF.aMPDUMaximumLength;
 		sendTime = 0;
 		timeoutLimit = 500;//**want this to be 0.5 seconds
+		minCWin = theRF.aCWmin;
+		maxCWin = theRF.aCWmax;
+		expBackOff = minCWin;
 	}
 
 
@@ -96,14 +102,12 @@ public class Sthread implements Runnable {
 			//as long as there is something to send
 			while(!abqSendAck.isEmpty()){
 
-
-
 				/*
 					as long as we haven't received an ACK, haven't
 					timed out, and haven't hit our retry limit,
 					keep re-sending the packet at intervals
 				 */
-				while(numRetry<retryLimit && notACKed){	
+				while(numRetry<retryLimit && notACKed && (expBackOff<maxCWin)){	
 					
 					//do we need to flip the retry bit
 					if(numRetry==1){
@@ -127,7 +131,6 @@ public class Sthread implements Runnable {
 					while(((sendTime !=0 )&&(theRF.clock()-sendTime) < timeoutLimit) && notACKed){
 						//check if we received an ACK
 						if(BuildPacket.rcvACK.get()){
-							System.out.println("received the ACK in our send thread.");
 							//check that the ACK was for the packet we just sent
 							short ackAdd = BuildPacket.shtRecSrcAdd;
 
@@ -159,7 +162,7 @@ public class Sthread implements Runnable {
 
 					}
 					
-					
+					System.out.println("out of first loop");
 
 					if(notACKed){
 						//keep sending
@@ -193,7 +196,7 @@ public class Sthread implements Runnable {
 							System.out.println("From SendThread(B) - Number of Retrys = " + numRetry);
 
 							//wait exponential back-off time
-							if(theRF.getIdleTime() > (expBackOff*numRetry)){
+							if(theRF.getIdleTime() > (randExpoBack.nextInt(expBackOff*numRetry))){
 								System.out.println("Wait exponential backoff time while medium idle.");
 								//send the data
 								theRF.transmit(abqSendAck.element());
@@ -243,9 +246,16 @@ public class Sthread implements Runnable {
 								System.out.println("From SendThread(C) - Number of Retrys = " + numRetry);
 
 								//wait exponential back-off time
-								if(theRF.getIdleTime() > (expBackOff*numRetry)){
-									System.out.println("Wait exponential backoff time while medium idle.");
-
+								
+								try {
+									Thread.sleep(randExpoBack.nextInt(expBackOff));
+								} catch (InterruptedException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+									System.out.println("Waited exponential backoff time while medium idle.");
+									//for next window size
+									expBackOff = expBackOff *2;
 									//send the data
 									theRF.transmit(abqSendAck.element());
 									numRetry = numRetry + 1; //count this retry
@@ -254,7 +264,7 @@ public class Sthread implements Runnable {
 									System.out.println("Transmit Frame1: Sent Packet");
 
 
-								}
+								
 							}
 
 							System.out.println("The Medium is still idle.");
@@ -293,6 +303,9 @@ public class Sthread implements Runnable {
 				if(BuildPacket.rcvACK.get()){
 					System.out.println("Packet was ACKed!!!!");
 				}
+				
+				expBackOff = minCWin;
+				System.out.println("reset exponential backoff.");
 			}
 
 		}

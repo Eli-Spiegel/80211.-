@@ -1,6 +1,7 @@
 package wifi;
 
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import rf.RF;
@@ -104,12 +105,18 @@ public class LinkLayer implements Dot11Interface {
 		   e.printStackTrace();
 	   }*/
 	   System.out.println("data can be called from above");
-	   
+	   String thetext= null;
 	   //"block" until data is received
 	   while(t.getDestAddr() == 0);
+	   try {
+		thetext = new String(t.getBuf(),"US-ASCII");
+	} catch (UnsupportedEncodingException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
 	   output.println("Data received from: " + t.getSourceAddr());
 	   output.println("Tx starting from host " + t.getSourceAddr() + " at local time " + theRF.clock());
-	   output.println("From " + String.valueOf(t.getSourceAddr()) + ": " + t.getBuf().toString());
+	   output.println("From " + String.valueOf(t.getSourceAddr()) + ": " + thetext);
 	   
 	   return BuildPacket.recData.length;
 	   //****
