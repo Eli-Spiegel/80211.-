@@ -160,6 +160,7 @@ public class Sthread implements Runnable {
 							//not an ack for the right packet?
 						}
 
+						//ADD SLEEP
 					}
 					
 					System.out.println("out of first loop");

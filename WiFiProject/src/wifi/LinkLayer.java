@@ -129,7 +129,15 @@ public class LinkLayer implements Dot11Interface {
    }
 
    /**
-    * Returns a current status code.  See docs for full description.
+    * Sets a status code upon the completion of each interface routine. 
+    * Also sets the status code for each attempted packet transmission. 
+    * Returns the current status of the 802.11~ layer.  See docs for full description.
+    * 
+    * SUCCESS if all went well, or the appropriate error code if not
+    * TX_DELIVERED if the packet was acknowledged
+    * TX_FAILED otherwise
+    * 
+    * @return Status code
     */
    public int status() {
       output.println(theRF.inUse());
@@ -138,9 +146,51 @@ public class LinkLayer implements Dot11Interface {
 
    /**
     * Passes command info to your link layer.  See docs for full description.
+    * 
+    * @param cmd is numbers 0,1,2,3 indicating a desired command
+    * 		0 - Print current settings
+    * 		1 - Set the diagnostic level
+    * 		2 - Select whether slot detection is random or fixed
+    * 		3 - Set the delay, in seconds, between transmission of Beacon frames
+    * @param val is the value associated with the command
+    * @return response from the command
     */
    public int command(int cmd, int val) {
       output.println("LinkLayer: Sending command "+cmd+" with value "+val);
+      
+      if(cmd == 0){
+    	  //Print current settings*****FINISH*****
+    	  output.println("Diagnostic Level: ");
+    	  output.println("Collision Window Slot Choice: ");
+    	  output.println("Beacon Intervals: ");
+      }
+      
+      if (cmd == 1){
+    	  //Set the diagnostic level
+    	  //turn diagnostic output on/off
+    	  if (val == 0){
+    		  output.println("Diagnostic Level is set to: OFF");  
+    	  }
+    	  if (val ==1){
+    		  output.println("Diagnostic Level is set to: ON ");
+    	  }
+    	  
+      }
+      
+      if (cmd == 2){
+    	  //Select whether slot detection is random or fixed
+    	  
+      }
+      
+      if (cmd == 3){
+    	  //Set the delay, in seconds, between transmission of Beacon frames
+    	  
+      }
+      
+      if(cmd>3){
+    	  output.println("The command" + cmd + " is not supported by the Link Layer");
+      }
+      
       return 0;
    }
 }
