@@ -37,6 +37,12 @@ public class Sthread implements Runnable {
 	private Random randExpoBack = new Random();
 	private int minCWin;
 	private int maxCWin;
+	//how often beacons are transmitted from us
+	private long beaconFreq;
+	//time since last beacon
+	private long lastBeacon;
+	//blank byte array for Beacons (long value 0, 128 bits)
+	private byte [] blankBeacon = new byte[8];
 
 	//need an array for addresses and sequence numbers
 	//the order of packets interchanging with each address
@@ -69,6 +75,7 @@ public class Sthread implements Runnable {
 		minCWin = theRF.aCWmin;
 		maxCWin = theRF.aCWmax;
 		expBackOff = minCWin;
+		beaconFreq = 30000000;//30 seconds
 	}
 
 
@@ -83,6 +90,13 @@ public class Sthread implements Runnable {
 		boolean busy = false; //for checking ability to send
 		boolean notACKed = true;
 
+		//*****TEST****
+		//loop to make sure both clocks are running
+		long timer = theRF.clock();
+		while((theRF.clock() - timer)<5000000){
+			//wait five seconds
+			System.out.println("The current clock is: " + theRF.clock());
+		}
 
 		while(true){
 
@@ -96,6 +110,21 @@ public class Sthread implements Runnable {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+			}
+			
+			//sending beacons
+			if((theRF.clock()-lastBeacon) > beaconFreq){
+				//send another beacon
+				
+				//give to BuildPacket
+				byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16386);
+				byte[] temp = new byte[8];
+				//adding the current local time ***still ad time to create and transmit****
+				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()), 0, beacon, 6, 8);
+				System.out.println("The current local time is: " + theRF.clock());
+				theRF.transmit(beacon);
+				//start timer 
+				lastBeacon = theRF.clock();
 			}
 
 

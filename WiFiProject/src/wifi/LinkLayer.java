@@ -15,7 +15,7 @@ import rf.RF;
  */
 public class LinkLayer implements Dot11Interface {
    private RF theRF; // You'll need one of these eventually
-   private short ourMAC;       // Our MAC address
+   static short ourMAC;       // Our MAC address
    private PrintWriter output; // The output stream we'll write to
    //Array Blocking Queue to hold packets being sent
    private ArrayBlockingQueue <byte []> sendBlocQ = new ArrayBlockingQueue(10);
@@ -24,8 +24,7 @@ public class LinkLayer implements Dot11Interface {
    //Array Blocking Queue with unpacked packets to be called from above
    private ArrayBlockingQueue <byte[]> readyBlocQ = new ArrayBlockingQueue(10);
    //to hold the destination address of a packet
-   private short destAdd;
-   
+   private short destAdd; 
    
    //our threads that will send and receive
    public Rthread recThread;
@@ -69,7 +68,7 @@ public class LinkLayer implements Dot11Interface {
 		   output.println("LinkLayer: Sending "+len+" bytes to "+dest);
 	   //keep sending
 			   try {
-				   sendBlocQ.put(BuildPacket.build(data, dest, ourMAC));
+				   sendBlocQ.put(BuildPacket.build(data, dest, ourMAC, (short) 0));
 			   } catch (InterruptedException e) {
 				   // TODO Auto-generated catch block
 				   e.printStackTrace();
