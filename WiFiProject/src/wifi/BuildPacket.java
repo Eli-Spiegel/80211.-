@@ -125,7 +125,7 @@ public static byte[] build(byte[] data, short dest, short ourMac, short frameTyp
                 System.arraycopy(data, 0, packetFin, 6, data.length);
                 //add the first crc
                 crcVal.update(packetFin,0,packetFin.length-4);
-                System.arraycopy(bitshiftcrc(crcVal.getValue()), 0, packetFin, 6 + data.length, 4);
+                System.arraycopy(bitshiftcrc((int)crcVal.getValue()), 0, packetFin, 6 + data.length, 4);
                 //add the second crc
                
                 LinkLayer.diagOut("it is doing this /n");
@@ -151,9 +151,9 @@ public static byte[] bitshift(short theShort ) {
         return ret;
 }
 
-public static byte[] bitshiftcrc(double thedub ) {
-	 byte[] bytes = new byte[8];
-	    ByteBuffer.wrap(bytes).putDouble(thedub);
+public static byte[] bitshiftcrc(int theint ) {
+	 byte[] bytes = new byte[4];
+	    ByteBuffer.wrap(bytes).putInt(theint);
 	    return bytes;
 }
         
@@ -190,28 +190,32 @@ public static byte[] bitshiftcrc(double thedub ) {
                 if(shtRecFrameType == (short)0){
                         //then it is a data packet
                         rcvData.getAndSet(true);
+                        System.out.println("The FrameType is : Data");
                 }
                 //ACK =001000000000000000 =8192
                 if(shtRecFrameType == (short)8192){
                         //then it is an ACK packet
                         rcvACK.getAndSet(true);
+                        System.out.println("The FrameType is : ACK");
                 }
                 //Beacon = 0100000000000000 = 16384
                 if(shtRecFrameType == (short)16384){
                         //then it is a Beacon
                         rcvBeacon.getAndSet(true);
+                        System.out.println("The FrameType is : Beacon");
                 }
                 //CTS = 10000000000000000 = 32768
                 if(shtRecFrameType == (short)32768){
                         //then it is a CTS
                         rcvCTS.getAndSet(true);
+                        System.out.println("The FrameType is : CTS");
                 }
                 //RTS = 1010000000000000 = 40960
                 if(shtRecFrameType == (short)40960){
                         //then it is a RTS
                         rcvRTS.getAndSet(true);
+                        System.out.println("The FrameType is : RTS");
                 }
-                System.out.println("The FrameType is : " + shtRecFrameType);
                 return shtRecFrameType;
         }
 

@@ -352,7 +352,7 @@ public class Sthread implements Runnable {
 				}
 				
 				expBackOff = minCWin;
-				LinkLayer.diagOut("Resetting exponential backoff.");
+				LinkLayer.diagOut("Resetting exponential backoff to original.");
 			}
 
 		}

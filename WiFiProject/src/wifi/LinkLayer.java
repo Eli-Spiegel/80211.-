@@ -209,17 +209,25 @@ public class LinkLayer implements Dot11Interface {
 	public int command(int cmd, int val) {
 		output.println("LinkLayer: Sending command "+cmd+" with value "+val);
 
-		//if(cmd == 0){
+		if(cmd == 0){
 			//Print current settings*****FINISH*****
-			/*if(val == 1){
-				diagOn.set(true);
-				output.println("Diagnostic Level: On");
+			output.println("Command 0 Options and Settings - Values --> Ignored");
+			output.println("Command 1 Diagnostic Level - Values --> 0: Off , 1: On");
+			output.println("Command 2 Slot Selection - Values --> 0: Random, 1: Fixed at Max");
+			output.println("Command 3 Beacon Interval - Values --> int: Delay in Seconds");
+			output.println("Current Settings: ");
+			if(diagOn.get() == false){
+				output.println("Diagnostic Level: " + "Off");
+			}else{
+				output.println("Diagnostic Level: " + "On");
 			}
-			if(val == 0){
-				diagOn.set(false);
-				output.println("Diagnostic Level: Off");
-			}*/
-		//}
+			if(fixedWin.get() == false){
+				output.println("Slot Selection: " + "Random");
+			}else{
+				output.println("Slot Selection: " + "Fixed");
+			}
+			output.println("Beacon Interval: " + (setBeacFreq/1000000));
+		}
 
 		if (cmd == 1){
 			//Set the diagnostic level
@@ -236,7 +244,7 @@ public class LinkLayer implements Dot11Interface {
 		}
 
 		if (cmd == 2){
-			//Select whether slot detection is random or fixed
+			//Select whether slot selection is random or fixed
 			if (val == 0){
 				//random slot selection window
 				fixedWin.set(false); 
@@ -251,7 +259,7 @@ public class LinkLayer implements Dot11Interface {
 
 		if (cmd == 3){
 			//Set the delay, in seconds, between transmission of Beacon frames
-			setBeacFreq = (long)val;
+			setBeacFreq = (long)(val*1000000);
 			output.println("Beacon Transmission Delay: " + val + " seconds");
 		}
 
