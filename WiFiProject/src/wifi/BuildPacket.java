@@ -128,8 +128,8 @@ public static byte[] build(byte[] data, short dest, short ourMac, short frameTyp
                 System.arraycopy(bitshiftcrc(crcVal.getValue()), 0, packetFin, 6 + data.length, 4);
                 //add the second crc
                
-                System.out.println("it is doing this /n");
-                System.out.println(Arrays.toString(packetFin));
+                LinkLayer.diagOut("it is doing this /n");
+                LinkLayer.diagOut(Arrays.toString(packetFin));
                 
                 
                 theSTable.remove(dest);
@@ -211,7 +211,7 @@ public static byte[] bitshiftcrc(double thedub ) {
                         //then it is a RTS
                         rcvRTS.getAndSet(true);
                 }
-                System.out.println("The FrameType is : " + shtRecFrameType);
+                LinkLayer.diagOut("The FrameType is : " + shtRecFrameType);
                 return shtRecFrameType;
         }
 
@@ -230,7 +230,7 @@ public static byte[] bitshiftcrc(double thedub ) {
                 shtRecRetry = (short)(shtRecRetry & (short)(4096));
                 //should be holding the retry bit, with 3 zeros in front and 4 behind
                 
-                System.out.println("The Retry Bit is : " + shtRecRetry);
+                LinkLayer.diagOut("The Retry Bit is : " + shtRecRetry);
                 
                 //set the boolean
                 if(shtRecRetry > 0){
@@ -253,7 +253,7 @@ public static byte[] bitshiftcrc(double thedub ) {
                 //AND with 0000111111111111, (short value = 4095)
                 shtRecSeqNum = (short)(shtRecSeqNum & (short)4095);
                 //should be holding the sequence number, 4 zeros in front
-                System.out.println("The Sequence Number is: " + shtRecSeqNum);
+                LinkLayer.diagOut("The Sequence Number is: " + shtRecSeqNum);
                 return shtRecSeqNum;
         }
 
@@ -341,8 +341,6 @@ public static byte[] bitshiftcrc(double thedub ) {
                  return ret;
                  
         }
-        
-
 
 }
 

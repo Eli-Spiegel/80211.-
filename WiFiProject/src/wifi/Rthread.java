@@ -63,7 +63,7 @@ public class Rthread implements Runnable {
          * printing periodically as it goes. 
          */
         public void run() {
-                System.out.println("Receive is alive and well");
+        	LinkLayer.diagOut("Receive is alive and well");
                 while(true)
                 {
                         if(theRF.dataWaiting()){
@@ -71,7 +71,7 @@ public class Rthread implements Runnable {
                                 recPac = theRF.receive();
                                 
                                 //******TEST****
-                                System.out.println("The recieveing time is: " +theRF.clock());
+                                LinkLayer.diagOut("The recieveing time is: " +theRF.clock());
 
                                 //check to see if something was received
                                 if (recPac.length != 0){
@@ -85,7 +85,7 @@ public class Rthread implements Runnable {
                                         //check if it is for us
                                         recDestAdd = BuildPacket.retDestAd(recPac);
                                         recSrcAdd = BuildPacket.retSrcAd(recPac);
-                                        System.out.println("Gathered incoming packet info from:" + recSrcAdd);
+                                        LinkLayer.diagOut("Gathered incoming packet info from:" + recSrcAdd);
                                         
                                         if(recDestAdd == ourMAC){
                                                 
@@ -95,20 +95,20 @@ public class Rthread implements Runnable {
                                         recSeqNum = BuildPacket.retSeqNum(recPac);
                                         recData = BuildPacket.retRecData(recPac);
                                         
-                                        System.out.println("the recDestAdd is: "+recDestAdd+" and the ourMAC is: " +ourMAC);
+                                        LinkLayer.diagOut("the recDestAdd is: "+recDestAdd+" and the ourMAC is: " +ourMAC);
                                         
                                         //check to see if the packet was for us
                                         //turn compare each byte
                                         
                                         
                                                 //the packet is for us!
-                                                System.out.println("The packet is for us!");
+                                        		LinkLayer.diagOut("The packet is for us!");
                                                 //check what type of packet we are receiving
                                                 //BuildPacket.rcvData.getAndSet(false);
                                                 if(BuildPacket.rcvData.get()){
                                                         //data packet!
                                                         isData = true;
-                                                        System.out.println("Received a data packet.");
+                                                        LinkLayer.diagOut("Received a data packet.");
                                                                 if(!theRTable.containsKey(recSrcAdd)||theRTable.get(recSrcAdd) < recSeqNum||theRTable.get(recSrcAdd)>4090&&recSrcAdd>100){
                                                                 
                                                                 if(!theRTable.containsKey(recSrcAdd))
@@ -118,7 +118,7 @@ public class Rthread implements Runnable {
                                                                 
                                                                 if(!(theRTable.get(recSrcAdd)==recSeqNum-1)||recSeqNum!=0)
                                                                 {
-                                                                        System.out.println("There is a gap in the sequence numbers");
+                                                                		LinkLayer.diagOut("There is a gap in the sequence numbers");
                                                                 }
 
 
@@ -141,14 +141,14 @@ public class Rthread implements Runnable {
                                                         crcVal.update(theackpacket,0,6);
                                                         System.arraycopy(BuildPacket.bitshiftcrc(crcVal.getValue()), 0, theackpacket, 6, 4);
                                                         
-                                                         System.out.println("it should be sending an ack");
+                                                         LinkLayer.diagOut("it should be sending an ack");
                                                          if(theRF.getIdleTime()<100){
                                                                  
                                                          theRF.transmit(theackpacket);
-                                                         System.out.println("it should have sent an ack");
+                                                         LinkLayer.diagOut("it should have sent an ack");
                                                          BigInteger bi = new BigInteger(theackpacket);
-                                                         System.out.println(bi.toString(2));
-                                                         System.out.println("the address that it is from is "+BuildPacket.retSrcAd(theackpacket)+ "   the Adress it is to "+BuildPacket.retDestAd(theackpacket));
+                                                         LinkLayer.diagOut(bi.toString(2));
+                                                         LinkLayer.diagOut("the address that it is from is "+BuildPacket.retSrcAd(theackpacket)+ "   the Adress it is to "+BuildPacket.retDestAd(theackpacket));
                                                          if(recRetry==0)
                                                          {
                                                                  short temp1 =theRTable.get(recSrcAdd);
@@ -162,19 +162,19 @@ public class Rthread implements Runnable {
                                                 if(BuildPacket.rcvACK.get()){
                                                         //ACK packet!
                                                         //it is an ACK
-                                                        System.out.println("Received an ACK packet.");
+                                                		LinkLayer.diagOut("Received an ACK packet.");
                                                         //NEED TO CLEAR OUT ARRAY BLOCKING QUEUE using SeqNum
                                                 }
                                                 if(BuildPacket.rcvBeacon.get()){
                                                         //it is a Beacon packet
-                                                        System.out.println("Received a Beacon packet.");
+                                                		LinkLayer.diagOut("Received a Beacon packet.");
                                                 }
                                                 if(BuildPacket.rcvCTS.get()){
-                                                        System.out.println("Received a CTS packet.");
+                                                		LinkLayer.diagOut("Received a CTS packet.");
                                                 }
                                                 if(BuildPacket.rcvRTS.get()){
                                                         //it is an RTS
-                                                        System.out.println("Received a RTS packet.");
+                                                		LinkLayer.diagOut("Received a RTS packet.");
                                                 }
 
                                                 //if data packet, need to put into an A.B.Q. to be accessed in LinkLayer

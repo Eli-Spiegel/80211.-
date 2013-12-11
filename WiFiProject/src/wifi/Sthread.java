@@ -74,8 +74,20 @@ public class Sthread implements Runnable {
 		timeoutLimit = 500;//**want this to be 0.5 seconds
 		minCWin = theRF.aCWmin;
 		maxCWin = theRF.aCWmax;
-		expBackOff = minCWin;
-		beaconFreq = 30000000;//30 seconds
+		beaconFreq = LinkLayer.setBeacFreq;
+		
+		if(LinkLayer.fixedWin.get()==true){
+			//use max everytime
+			expBackOff = maxCWin;
+			//will select the maximum value each time
+  		  	//(maximum that the collision window allows)
+		}else{
+			//will select a value w/in the current collision window
+  		  	//randomly when waiting after DIFS has elapsed
+			expBackOff = randExpoBack.nextInt(maxCWin);
+		}
+		
+		
 	}
 
 
@@ -85,7 +97,7 @@ public class Sthread implements Runnable {
 	 * printing periodically as it goes.
 	 */
 	public void run() {
-		System.out.println("send is alive and well");
+		LinkLayer.diagOut("send is alive and well");
 
 		boolean busy = false; //for checking ability to send
 		boolean notACKed = true;
@@ -95,10 +107,12 @@ public class Sthread implements Runnable {
 		long timer = theRF.clock();
 		while((theRF.clock() - timer)<5000){
 			//wait five seconds
-			System.out.println("The current clock is: " + theRF.clock());
+			LinkLayer.diagOut("The current clock is: " + theRF.clock());
 		}
 
 		while(true){
+			
+			beaconFreq = LinkLayer.setBeacFreq;
 
 			if(!ablockQSent.isEmpty()){
 				//something wanting to be sent
@@ -121,7 +135,7 @@ public class Sthread implements Runnable {
 				byte[] temp = new byte[8];
 				//adding the current local time ***still ad time to create and transmit****
 				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()).array(), 0, beacon, 6, 8);
-				System.out.println("The current local time is: " + theRF.clock());
+				LinkLayer.diagOut("The current local time is: " + theRF.clock());
 				theRF.transmit(beacon);
 				//start timer 
 				lastBeacon = theRF.clock();
@@ -172,7 +186,9 @@ public class Sthread implements Runnable {
 									//the packet is for us and 
 									//is responding to the packet we just sent
 									notACKed = false;
-									System.out.println("SendThread recognizes ack.");
+									LinkLayer.diagOut("SendThread recognizes ack.");
+									//update status
+									LinkLayer.setStatus.set(4); //TX_DELIVERED
 									//stop the time
 									rcvTime = theRF.clock();
 									//remove the acked packet from the ABQ holding it
@@ -189,51 +205,50 @@ public class Sthread implements Runnable {
 							//not an ack for the right packet?
 						}
 
-						//ADD SLEEP
+						//ADD SLEEP!!!!!!!!!!!!!!!!!!!!
 					}
 					
-					System.out.println("out of first loop");
 
 					if(notACKed){
 						//keep sending
 
 						if(theRF.inUse()){
 							busy = true;
-							System.out.println("Medium is NOT idle.");
+							LinkLayer.diagOut("Medium is NOT idle.");
 
 							while(busy){
-								System.out.println("Wait until current transmission ends.");
+								LinkLayer.diagOut("Wait until current transmission ends.");
 								while(theRF.inUse()){
 									//wait until current transmission ends	
-									System.out.println("Waiting for transmission to end.");
+									LinkLayer.diagOut("Waiting for transmission to end.");
 								}
 								//not transmitting right now
 								busy = false;
 								//wait DIFS
 								if(theRF.getIdleTime() > difs)
 								{
-									System.out.println("Waiting DIFS");
+									LinkLayer.diagOut("Waiting DIFS");
 									//Check if open
 									if(theRF.inUse()){
 										//the RF layer is busy
 										busy = true;
-										System.out.println("Medium is NOT still idle.");
+										LinkLayer.diagOut("Medium is NOT still idle.");
 									}	
 								}
 							}
 							//The channel is open now
 
-							System.out.println("From SendThread(B) - Number of Retrys = " + numRetry);
+							LinkLayer.diagOut("From SendThread(B) - Number of Retrys = " + numRetry);
 
 							//wait exponential back-off time
 							if(theRF.getIdleTime() > (randExpoBack.nextInt(expBackOff*numRetry))){
-								System.out.println("Wait exponential backoff time while medium idle.");
+								LinkLayer.diagOut("Wait exponential backoff time while medium idle.");
 								//send the data
 								theRF.transmit(abqSendAck.element());
 								numRetry = numRetry + 1; //count this retry
 								//record when it was sent
 								sendTime = theRF.clock();
-								System.out.println("Transmit Frame0: Sent Packet");
+								LinkLayer.diagOut("Transmit Frame0: Sent Packet");
 							}
 						}
 
@@ -243,37 +258,37 @@ public class Sthread implements Runnable {
 						//wait DIFS
 						if(theRF.getIdleTime() > difs)
 						{
-							System.out.println("Waiting DIFS");
+							LinkLayer.diagOut("Waiting DIFS");
 
 							//Check if open
 							if(theRF.inUse()){
 								//the RF layer is busy
 								busy = true;
-								System.out.println("Medium is NOT idle anymore.");
+								LinkLayer.diagOut("Medium is NOT idle anymore.");
 
 								while(busy){
-									System.out.println("Wait until current transmission ends.");
+									LinkLayer.diagOut("Wait until current transmission ends.");
 									while(theRF.inUse()){
 										//wait until current transmission ends	
-										System.out.println("Waiting for transmission to end.");
+										LinkLayer.diagOut("Waiting for transmission to end.");
 									}
 									//not transmitting right now
 									busy = false;
 									//wait DIFS
 									if(theRF.getIdleTime() > difs)
 									{
-										System.out.println("Waiting DIFS");
+										LinkLayer.diagOut("Waiting DIFS");
 										//Check if open
 										if(theRF.inUse()){
 											//the RF layer is busy
 											busy = true;
-											System.out.println("Medium is NOT still idle.");
+											LinkLayer.diagOut("Medium is NOT still idle.");
 										}	
 									}
 								}
 								//The channel is open now
 
-								System.out.println("From SendThread(C) - Number of Retrys = " + numRetry);
+								LinkLayer.diagOut("From SendThread(C) - Number of Retrys = " + numRetry);
 
 								//wait exponential back-off time
 								
@@ -283,7 +298,7 @@ public class Sthread implements Runnable {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
-									System.out.println("Waited exponential backoff time while medium idle.");
+									LinkLayer.diagOut("Waited exponential backoff time while medium idle.");
 									//for next window size
 									expBackOff = expBackOff *2;
 									//send the data
@@ -291,29 +306,29 @@ public class Sthread implements Runnable {
 									numRetry = numRetry + 1; //count this retry
 									//record when it was sent
 									sendTime = theRF.clock();
-									System.out.println("Transmit Frame1: Sent Packet");
+									LinkLayer.diagOut("Transmit Frame1: Sent Packet");
 
 
 								
 							}
 
-							System.out.println("The Medium is still idle.");
+							LinkLayer.diagOut("The Medium is still idle.");
 							//send the data
 							theRF.transmit(abqSendAck.element());
 							//record when it was sent
 							sendTime = theRF.clock();
-							System.out.println("Transmit Frame2: Sent Packet");
+							LinkLayer.diagOut("Transmit Frame2: Sent Packet");
 							numRetry = numRetry + 1;
 						}
 
 						
 					}
-					System.out.println("Number of Retrys in Send: " + numRetry);
+					LinkLayer.diagOut("Number of Retrys in Send: " + numRetry);
 				}
 
 				//check if we have hit the retry limit
 				if(numRetry >= retryLimit){
-					System.out.println("Hit retry limit.");
+					LinkLayer.diagOut("Hit retry limit.");
 					//we need to stop trying to send this packet
 					//and remove it from the ArrayBlockingQueue
 
@@ -327,23 +342,24 @@ public class Sthread implements Runnable {
 					numRetry = 0;
 					//we should also stop our timer
 					sendTime=0;
+					//update Status
+					LinkLayer.setStatus.set(5);//TX_FAILED
 				}
 
 				//check to see if we received and ACK
 				if(BuildPacket.rcvACK.get()){
-					System.out.println("Packet was ACKed!!!!");
+					LinkLayer.diagOut("We recieved an ACK! Is it ours?");
 				}
 				
 				expBackOff = minCWin;
-				System.out.println("reset exponential backoff.");
+				LinkLayer.diagOut("Resetting exponential backoff.");
 			}
 
 		}
 
 
 	}
-
-
+	
 
 }
 
