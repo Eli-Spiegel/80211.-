@@ -129,7 +129,7 @@ public class Sthread implements Runnable {
 			}
 			
 			//sending beacons
-			if((theRF.clock()-lastBeacon) > beaconFreq){
+			if(((theRF.clock()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
 				//send another beacon
 				sendingBeacon = true;
 				//give to BuildPacket
@@ -142,25 +142,31 @@ public class Sthread implements Runnable {
 				theRF.transmit(beacon);
 				//start timer 
 				lastBeacon = theRF.clock();
+				//reset destination add for further use
+				byte [] blah = new byte[1];
+				BuildPacket.build(blah, (short)0, (short)0, (short)0);
+				numRetry = 5;
 			}
 
 
 			//as long as there is something to send
-			while(!abqSendAck.isEmpty()){
+			while(!abqSendAck.isEmpty() && !sendingBeacon){
 
 				/*
+				 * NOTNOT
 					as long as we haven't received an ACK, haven't
 					timed out, and haven't hit our retry limit,
 					keep re-sending the packet at intervals
 				 */
 				while(numRetry<retryLimit && notACKed && (expBackOff<maxCWin)){	
 					
-					//if it is a beacon we only need to send it once
+				//if it is a beacon we only need to send it once
 					if(sendingBeacon == true){
 						//set the numRetry so we won't keep sending
 						numRetry = retryLimit;
 						//reset the boolean
 						sendingBeacon = false;
+						
 					}
 					
 					//do we need to flip the retry bit
@@ -365,6 +371,8 @@ public class Sthread implements Runnable {
 				expBackOff = minCWin;
 				LinkLayer.diagOut("Resetting exponential backoff to original.");
 			}
+			//reset beacon boolean
+			sendingBeacon = false;
 
 		}
 
