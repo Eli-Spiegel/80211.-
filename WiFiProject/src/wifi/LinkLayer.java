@@ -211,14 +211,14 @@ public class LinkLayer implements Dot11Interface {
 
 		if(cmd == 0){
 			//Print current settings*****FINISH*****
-			if(diagOn.get() == true){
+			if(val == 1){
+				diagOn.set(true);
 				output.println("Diagnostic Level: On");
 			}
-			if(diagOn.get() == false){
+			if(val == 0){
+				diagOn.set(false);
 				output.println("Diagnostic Level: Off");
 			}
-			output.println("Collision Window Slot Choice: ");
-			output.println("Beacon Intervals: ");
 		}
 
 		if (cmd == 1){
