@@ -70,8 +70,8 @@ public class Rthread implements Runnable {
                                 //make a call to receive
                                 recPac = theRF.receive();
                                 
-                                //******TEST****
-                                LinkLayer.diagOut("The recieveing time is: " +theRF.clock());
+                                //******TIMING TEST****
+                                System.out.println("The recieveing time is: " +theRF.clock());
 
                                 //check to see if something was received
                                 if (recPac.length != 0){
@@ -90,7 +90,7 @@ public class Rthread implements Runnable {
                                         if(recDestAdd == ourMAC){
                                                 
                                         //each time this is called it starts with all false booleans for frame types 
-                                        recFrameType = BuildPacket.retFrameType(recPac); 
+                                        recFrameType = BuildPacket.retFrameType(recPac);
                                         recRetry = BuildPacket.retRetry(recPac);
                                         recSeqNum = BuildPacket.retSeqNum(recPac);
                                         recData = BuildPacket.retRecData(recPac);

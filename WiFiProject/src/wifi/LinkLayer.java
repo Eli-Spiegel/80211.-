@@ -209,17 +209,17 @@ public class LinkLayer implements Dot11Interface {
 	public int command(int cmd, int val) {
 		output.println("LinkLayer: Sending command "+cmd+" with value "+val);
 
-		if(cmd == 0){
+		//if(cmd == 0){
 			//Print current settings*****FINISH*****
-			if(val == 1){
+			/*if(val == 1){
 				diagOn.set(true);
 				output.println("Diagnostic Level: On");
 			}
 			if(val == 0){
 				diagOn.set(false);
 				output.println("Diagnostic Level: Off");
-			}
-		}
+			}*/
+		//}
 
 		if (cmd == 1){
 			//Set the diagnostic level

@@ -102,12 +102,12 @@ public class Sthread implements Runnable {
 		boolean busy = false; //for checking ability to send
 		boolean notACKed = true;
 
-		//*****TEST****
+		//*****TIMING TEST****
 		//loop to make sure both clocks are running
 		long timer = theRF.clock();
 		while((theRF.clock() - timer)<5000){
 			//wait five seconds
-			LinkLayer.diagOut("The current clock is: " + theRF.clock());
+			System.out.println("The current clock is: " + theRF.clock());
 		}
 
 		while(true){
@@ -135,7 +135,7 @@ public class Sthread implements Runnable {
 				byte[] temp = new byte[8];
 				//adding the current local time ***still ad time to create and transmit****
 				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()).array(), 0, beacon, 6, 8);
-				LinkLayer.diagOut("The current local time is: " + theRF.clock());
+				System.out.println("The current local time is: " + theRF.clock());
 				theRF.transmit(beacon);
 				//start timer 
 				lastBeacon = theRF.clock();
