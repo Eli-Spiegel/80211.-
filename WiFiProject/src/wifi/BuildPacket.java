@@ -125,7 +125,7 @@ public static byte[] build(byte[] data, short dest, short ourMac, short frameTyp
                 System.arraycopy(data, 0, packetFin, 6, data.length);
                 //add the first crc
                 crcVal.update(packetFin,0,packetFin.length-4);
-                System.arraycopy(bitshiftcrc((int)crcVal.getValue()), 0, packetFin, 6 + data.length, 4);
+                System.arraycopy(bitshiftcrc(crcVal.getValue()), 0, packetFin, 6 + data.length, 4);
                 //add the second crc
                
                 LinkLayer.diagOut("it is doing this /n");
@@ -151,9 +151,12 @@ public static byte[] bitshift(short theShort ) {
         return ret;
 }
 
-public static byte[] bitshiftcrc(int theint ) {
+public static byte[] bitshiftcrc(long longs ) {
 	 byte[] bytes = new byte[4];
-	    ByteBuffer.wrap(bytes).putInt(theint);
+	 bytes[3] = (byte)(longs & 0xff);
+     bytes[2]= (byte)((longs >> 8)& 0xff);
+     bytes[1]= (byte)((longs >> 8)& 0xff);
+     bytes[0]= (byte)((longs >> 8)& 0xff);
 	    return bytes;
 }
         

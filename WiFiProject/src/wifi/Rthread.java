@@ -124,22 +124,37 @@ public class Rthread implements Runnable {
 
 
 
-								byte[] theackpacket = new byte[10];
-								theackpacket= BuildPacket.sixbytes(recPac);
+								 byte[] theackpacket = new byte[10];
+                                 theackpacket= BuildPacket.sixbytes(recPac);
+                                 
+                                  byte[] ackthing = BuildPacket.bitshift(ackshort);
+                                  ackthing[0]=(byte)(ackthing[0] |(1<<5));
+                                  byte[] theolddest= new byte[2];
+                                  byte[] theoldsrc= new byte[2];
+                                 byte[] thecrcarray= new byte[4];
+                                 byte[] thetemparray = new byte[6];
+                                 
+                                  theolddest[0]=theackpacket[2];
+                                 theolddest[1]= theackpacket[3];
+                                  theoldsrc[0]=theackpacket[4];
+                                 theoldsrc[1]= theackpacket[5];
+                                 theackpacket = new byte[10];
+                                theackpacket[0]=ackthing[0];
+                                theackpacket[1]=ackthing[1];
+                                theackpacket[2]=theolddest[0];
+                                theackpacket[3]=theolddest[1];
+                               theackpacket[4]=theoldsrc[0];
+                               theackpacket[5]=theoldsrc[1];
+                                
+                                 System.arraycopy(theackpacket, 0, thetemparray, 0, 6);
+                                 crcVal.update(thetemparray,0,thetemparray.length);
+                                 thecrcarray = BuildPacket.bitshiftcrc(crcVal.getValue());
+                                 theackpacket[6]=thecrcarray[0];
+                                 theackpacket[7]=thecrcarray[1];
+                                theackpacket[8]=thecrcarray[2];
+                                theackpacket[9]=thecrcarray[3];
 
-								byte[] ackthing = BuildPacket.bitshift(ackshort);
-								ackthing[0]=(byte)(ackthing[0] |(1<<5));
-								byte[] theolddest= new byte[2];
-								byte[] theoldsrc= new byte[2];
 
-								theackpacket[0]=ackthing[0];
-								theackpacket[1]=ackthing[1];
-								theolddest[0]=theackpacket[2];
-								theolddest[1]= theackpacket[3];
-								theoldsrc[0]=theackpacket[4];
-								theoldsrc[1]= theackpacket[5];
-								crcVal.update(theackpacket,0,6);
-								System.arraycopy(BuildPacket.bitshiftcrc((int)crcVal.getValue()), 0, theackpacket, 6, 4);
 
 								LinkLayer.diagOut("it should be sending an ack");
 								if(theRF.getIdleTime()<100){
