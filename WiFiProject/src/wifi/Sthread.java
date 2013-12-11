@@ -241,7 +241,7 @@ public class Sthread implements Runnable {
 							LinkLayer.diagOut("From SendThread(B) - Number of Retrys = " + numRetry);
 
 							//wait exponential back-off time
-							if(theRF.getIdleTime() > (randExpoBack.nextInt(expBackOff*numRetry))){
+							if(theRF.getIdleTime() > (randExpoBack.nextInt((expBackOff*numRetry)+1))){
 								LinkLayer.diagOut("Wait exponential backoff time while medium idle.");
 								//send the data
 								theRF.transmit(abqSendAck.element());

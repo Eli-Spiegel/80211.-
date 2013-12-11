@@ -211,7 +211,7 @@ public static byte[] bitshiftcrc(double thedub ) {
                         //then it is a RTS
                         rcvRTS.getAndSet(true);
                 }
-                LinkLayer.diagOut("The FrameType is : " + shtRecFrameType);
+                System.out.println("The FrameType is : " + shtRecFrameType);
                 return shtRecFrameType;
         }
 

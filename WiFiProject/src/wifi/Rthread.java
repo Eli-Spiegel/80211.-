@@ -87,7 +87,7 @@ public class Rthread implements Runnable {
                                         recSrcAdd = BuildPacket.retSrcAd(recPac);
                                         LinkLayer.diagOut("Gathered incoming packet info from:" + recSrcAdd);
                                         
-                                        if(recDestAdd == ourMAC){
+                                        if(recDestAdd == ourMAC || recDestAdd == -1){
                                                 
                                         //each time this is called it starts with all false booleans for frame types 
                                         recFrameType = BuildPacket.retFrameType(recPac);
@@ -167,7 +167,9 @@ public class Rthread implements Runnable {
                                                 }
                                                 if(BuildPacket.rcvBeacon.get()){
                                                         //it is a Beacon packet
-                                                		LinkLayer.diagOut("Received a Beacon packet.");
+                                                		System.out.println("Received a Beacon packet.");
+                                                		
+                                                		
                                                 }
                                                 if(BuildPacket.rcvCTS.get()){
                                                 		LinkLayer.diagOut("Received a CTS packet.");
