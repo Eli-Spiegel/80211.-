@@ -190,31 +190,31 @@ public static byte[] bitshiftcrc(int theint ) {
                 if(shtRecFrameType == (short)0){
                         //then it is a data packet
                         rcvData.getAndSet(true);
-                        System.out.println("The FrameType is : Data");
+                        System.out.println("Recieved FrameType: Data");
                 }
                 //ACK =001000000000000000 =8192
                 if(shtRecFrameType == (short)8192){
                         //then it is an ACK packet
                         rcvACK.getAndSet(true);
-                        System.out.println("The FrameType is : ACK");
+                        System.out.println("Recieved FrameType: ACK");
                 }
                 //Beacon = 0100000000000000 = 16384
                 if(shtRecFrameType == (short)16384){
                         //then it is a Beacon
                         rcvBeacon.getAndSet(true);
-                        System.out.println("The FrameType is : Beacon");
+                        System.out.println("Recieved FrameType: Beacon");
                 }
                 //CTS = 10000000000000000 = 32768
                 if(shtRecFrameType == (short)32768){
                         //then it is a CTS
                         rcvCTS.getAndSet(true);
-                        System.out.println("The FrameType is : CTS");
+                        System.out.println("Recieved FrameType: CTS");
                 }
                 //RTS = 1010000000000000 = 40960
                 if(shtRecFrameType == (short)40960){
                         //then it is a RTS
                         rcvRTS.getAndSet(true);
-                        System.out.println("The FrameType is : RTS");
+                        System.out.println("Recieved FrameType: RTS");
                 }
                 return shtRecFrameType;
         }

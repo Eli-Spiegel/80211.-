@@ -43,6 +43,8 @@ public class Sthread implements Runnable {
 	private long lastBeacon;
 	//blank byte array for Beacons (long value 0, 128 bits)
 	private byte [] blankBeacon = new byte[8];
+	//for sending a beacon only once
+	private boolean sendingBeacon = false;
 
 	//need an array for addresses and sequence numbers
 	//the order of packets interchanging with each address
@@ -129,12 +131,13 @@ public class Sthread implements Runnable {
 			//sending beacons
 			if((theRF.clock()-lastBeacon) > beaconFreq){
 				//send another beacon
-				
+				sendingBeacon = true;
 				//give to BuildPacket
 				byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16386);
 				byte[] temp = new byte[8];
 				//adding the current local time ***still ad time to create and transmit****
 				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()).array(), 0, beacon, 6, 8);
+				System.out.println("Sending a BEACON!");
 				System.out.println("The current local time is: " + theRF.clock());
 				theRF.transmit(beacon);
 				//start timer 
@@ -151,6 +154,14 @@ public class Sthread implements Runnable {
 					keep re-sending the packet at intervals
 				 */
 				while(numRetry<retryLimit && notACKed && (expBackOff<maxCWin)){	
+					
+					//if it is a beacon we only need to send it once
+					if(sendingBeacon == true){
+						//set the numRetry so we won't keep sending
+						numRetry = retryLimit;
+						//reset the boolean
+						sendingBeacon = false;
+					}
 					
 					//do we need to flip the retry bit
 					if(numRetry==1){
