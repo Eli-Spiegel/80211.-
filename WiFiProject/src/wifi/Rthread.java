@@ -109,20 +109,22 @@ public class Rthread implements Runnable {
 							//data packet!
 							isData = true;
 							LinkLayer.diagOut("Received a data packet.");
+							
+							//handle sequence numbers from incoming packets 
 							if(!theRTable.containsKey(recSrcAdd)||theRTable.get(recSrcAdd) < recSeqNum||theRTable.get(recSrcAdd)>4090&&recSrcAdd>100){
 
 								if(!theRTable.containsKey(recSrcAdd))
 								{
+									//we haven't see this address yet so 
+									//add it and start seq num at 0
 									theRTable.put(recSrcAdd, (short) 0);
 								}
 
 								if(!(theRTable.get(recSrcAdd)==recSeqNum-1)||recSeqNum!=0)
 								{
-									LinkLayer.diagOut("There is a gap in the sequence numbers");
+									//sequence numbers are out of order
+									LinkLayer.diagOut("There is a gap in the sequence numbers!");
 								}
-
-
-
 
 								 byte[] theackpacket = new byte[10];
                                  theackpacket= BuildPacket.sixbytes(recPac);
@@ -207,7 +209,7 @@ public class Rthread implements Runnable {
 
 						}
 					}
-					//reset for next recieved packet
+					//reset for next received packet
 					rcvTime = 0;
 
 				}

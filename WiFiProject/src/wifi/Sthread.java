@@ -73,7 +73,8 @@ public class Sthread implements Runnable {
 		retryLimit = theRF.dot11RetryLimit;
 		maxPacketLength = theRF.aMPDUMaximumLength;
 		sendTime = 0;
-		timeoutLimit = 500;//**want this to be 0.5 seconds
+		//**experimental roundtrip time (ADD IEEE saftey margin!!)**
+		timeoutLimit = 7978;
 		minCWin = theRF.aCWmin;
 		maxCWin = theRF.aCWmax;
 		beaconFreq = LinkLayer.setBeacFreq;
@@ -135,8 +136,8 @@ public class Sthread implements Runnable {
 				//give to BuildPacket
 				byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16386);
 				byte[] temp = new byte[8];
-				//adding the current local time ***still ad time to create and transmit****
-				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()).array(), 0, beacon, 6, 8);
+				//adding the current local time ***added time to create and transmit****
+				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+3989).array(), 0, beacon, 6, 8);
 				System.out.println("Sending a BEACON!");
 				System.out.println("The current local time is: " + theRF.clock());
 				theRF.transmit(beacon);
@@ -222,7 +223,13 @@ public class Sthread implements Runnable {
 							//not an ack for the right packet?
 						}
 
-						//ADD SLEEP!!!!!!!!!!!!!!!!!!!!
+						//sleep before checking for an ACK
+						try {
+							Thread.sleep(6000);//roundtrip time is ~8000
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					}
 					
 
