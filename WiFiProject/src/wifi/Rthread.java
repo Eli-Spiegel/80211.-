@@ -105,22 +105,22 @@ public class Rthread implements Runnable {
 						LinkLayer.diagOut("The packet is for us!");
 						//check what type of packet we are receiving
 						//BuildPacket.rcvData.getAndSet(false);
-						if(BuildPacket.rcvData.get()){
+						if(recFrameType==0){
 							//data packet!
 							isData = true;
 							LinkLayer.diagOut("Received a data packet.");
-							
+							if(!theRTable.containsKey(recSrcAdd))
+							{
+								//we haven't see this address yet so 
+								//add it and start seq num at 0
+								theRTable.put(recSrcAdd, (short) 0);
+							}
 							//handle sequence numbers from incoming packets 
-							if(!theRTable.containsKey(recSrcAdd)||theRTable.get(recSrcAdd) < recSeqNum||theRTable.get(recSrcAdd)>4090&&recSrcAdd>100){
+							if((theRTable.get(recSrcAdd) < recSeqNum) || (theRTable.get(recSrcAdd)>4090 && (recSeqNum<10))){
+								System.out.println("i am printed!");
+								
 
-								if(!theRTable.containsKey(recSrcAdd))
-								{
-									//we haven't see this address yet so 
-									//add it and start seq num at 0
-									theRTable.put(recSrcAdd, (short) 0);
-								}
-
-								if(!(theRTable.get(recSrcAdd)==recSeqNum-1)||recSeqNum!=0)
+								if(!(theRTable.get(recSrcAdd)==recSeqNum-1) && recSeqNum!=0)
 								{
 									//sequence numbers are out of order
 									LinkLayer.diagOut("There is a gap in the sequence numbers!");
@@ -130,16 +130,18 @@ public class Rthread implements Runnable {
                                  theackpacket= BuildPacket.sixbytes(recPac);
                                  
                                   byte[] ackthing = BuildPacket.bitshift(ackshort);
-                                  ackthing[0]=(byte)(ackthing[0] |(1<<5));
+                                  ackthing[0]=(byte)(theackpacket[0] |(1<<5));
+                                  ackthing[1]=theackpacket[1];
                                   byte[] theolddest= new byte[2];
                                   byte[] theoldsrc= new byte[2];
                                  byte[] thecrcarray= new byte[4];
                                  byte[] thetemparray = new byte[6];
                                  
-                                  theolddest[0]=theackpacket[2];
-                                 theolddest[1]= theackpacket[3];
-                                  theoldsrc[0]=theackpacket[4];
-                                 theoldsrc[1]= theackpacket[5];
+                                  
+                                  theoldsrc[0]=theackpacket[2];
+                                 theoldsrc[1]= theackpacket[3];
+                                 theolddest[0]=theackpacket[4];
+                                 theolddest[1]= theackpacket[5];
                                  theackpacket = new byte[10];
                                 theackpacket[0]=ackthing[0];
                                 theackpacket[1]=ackthing[1];
@@ -156,15 +158,15 @@ public class Rthread implements Runnable {
                                 theackpacket[8]=thecrcarray[2];
                                 theackpacket[9]=thecrcarray[3];
 
-
-
+                                BigInteger bi = new BigInteger(theackpacket);
+								System.out.println(bi.toString(2));
+                            
 								LinkLayer.diagOut("it should be sending an ack");
 								if(theRF.getIdleTime()<100){
-
+									System.out.println("i am in the if");
 									theRF.transmit(theackpacket);
 									LinkLayer.diagOut("it should have sent an ack");
-									BigInteger bi = new BigInteger(theackpacket);
-									LinkLayer.diagOut(bi.toString(2));
+									
 									LinkLayer.diagOut("the address that it is from is "+BuildPacket.retSrcAd(theackpacket)+ "   the Adress it is to "+BuildPacket.retDestAd(theackpacket));
 									if(recRetry==0)
 									{
