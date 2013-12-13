@@ -7,6 +7,8 @@ import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
 
 import rf.RF;
 
@@ -45,7 +47,7 @@ public class Sthread implements Runnable {
 	private byte [] blankBeacon = new byte[8];
 	//for sending a beacon only once
 	private boolean sendingBeacon = false;
-
+	private Checksum crcVal = new CRC32();
 	//need an array for addresses and sequence numbers
 	//the order of packets interchanging with each address
 	//increments on sending new packets
@@ -134,10 +136,10 @@ public class Sthread implements Runnable {
 				//send another beacon
 				sendingBeacon = true;
 				//give to BuildPacket
-				byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16386);
+				byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16384);
 				byte[] temp = new byte[8];
 				//adding the current local time ***added time to create and transmit****
-				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+3989).array(), 0, beacon, 6, 8);
+				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989).array(), 0, beacon, 6, 8);
 				System.out.println("Sending a BEACON!");
 				System.out.println("The current local time is: " + theRF.clock());
 				theRF.transmit(beacon);

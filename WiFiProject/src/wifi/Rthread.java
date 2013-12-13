@@ -116,7 +116,7 @@ public class Rthread implements Runnable {
 								theRTable.put(recSrcAdd, (short) 0);
 							}
 							//handle sequence numbers from incoming packets 
-							if((theRTable.get(recSrcAdd) < recSeqNum) || (theRTable.get(recSrcAdd)>4090 && (recSeqNum<10))){
+							if(theRTable.get(recSrcAdd) <= recSeqNum || (theRTable.get(recSrcAdd)>4090 && (recSeqNum<10))){
 								System.out.println("i am printed!");
 								
 

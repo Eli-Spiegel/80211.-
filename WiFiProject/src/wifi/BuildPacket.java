@@ -102,12 +102,12 @@ public static byte[] build(byte[] data, short dest, short ourMac, short frameTyp
                
                 //add will AND the frame type into the first 2 bytes of the packet
                 //already containing the seq num
-                buildcount = (short) (buildcount + frameType);
+                shtSendSeqNum = (short) (buildcount + frameType);
                 
-                shtSendSeqNum = buildcount;
+               
                 
                 
-                byte[] packet = bitshift(buildcount);
+                byte[] packet = bitshift(shtSendSeqNum);
                 byte[] destpac = bitshift(dest);
                 byte[] mac = bitshift(ourMac); 
                
@@ -134,7 +134,7 @@ public static byte[] build(byte[] data, short dest, short ourMac, short frameTyp
                 
                 theSTable.remove(dest);
                 buildcount++;
-                theSTable.put(dest, buildcount);
+                theSTable.put(dest, (short)(buildcount));
                 return packetFin;
                 
         }
@@ -182,11 +182,12 @@ public static byte[] bitshiftcrc(long longs ) {
                 rcvCTS.getAndSet(false);
                 rcvRTS.getAndSet(false);
                 recFrameType[0] = recData[0];
-                recFrameType[1] = recData[1];
+                recFrameType[0] = (byte) (recFrameType[0] & 0xE0);
+                recFrameType[1] = 0;
                 //short that holds the value of the first byte
                 shtRecFrameType = ByteBuffer.wrap(recFrameType).getShort();
 
-                shtRecFrameType = (short)(shtRecFrameType & 0xE000);
+           
                 //should be holding the frame type followed by 13 zeros
                 
                 //Data: 00000000 = 0
