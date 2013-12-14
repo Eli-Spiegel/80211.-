@@ -2,8 +2,11 @@ package wifi;
 
 import java.lang.reflect.Array;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -34,6 +37,8 @@ public class Rthread implements Runnable {
 	public short ackshort = 8192;
 	private HashMap<Short,Short> theRTable= new HashMap<Short,Short>();
 	Checksum crcVal = new CRC32();
+	//for the timing fudge factor
+	static AtomicLong fudge = new AtomicLong();
 
 	//need an array for addresses and sequence numbers
 	//the order of packets interchanging with each address
@@ -104,11 +109,35 @@ public class Rthread implements Runnable {
 						//the packet is for us!
 						LinkLayer.diagOut("The packet is for us!");
 						//check what type of packet we are receiving
+						
+						if(recFrameType == 2){
+							//beacon packet
+							//get 8-14 bytes
+							byte [] timeStamp = BuildPacket.retRecData(recPac);
+							//get long and compare
+							long bTime = ByteBuffer.wrap(timeStamp).getLong();
+							if( bTime < theRF.clock()){
+								//send a beacon
+								
+							}else{
+								//update fudge factor
+								fudge.set((long)(fudge.get() + bTime - theRF.clock() + fudge.get()));
+								LinkLayer.diagOut("Updated our fudge factor to the beacon's");
+							}
+							//compare with our own clock
+							
+						}
+						
+						
 						//BuildPacket.rcvData.getAndSet(false);
 						if(recFrameType==0){
 							//data packet!
 							isData = true;
 							LinkLayer.diagOut("Received a data packet.");
+							
+							
+							
+							
 							if(!theRTable.containsKey(recSrcAdd))
 							{
 								//we haven't see this address yet so 
