@@ -107,14 +107,14 @@ public class Sthread implements Runnable {
 		boolean busy = false; //for checking ability to send
 		boolean notACKed = true;
 
-		//*****TIMING TEST****
+		/*//*****TIMING TEST****
 		//loop to make sure both clocks are running
 		long timer = theRF.clock();
 		while((theRF.clock() - timer)<5000){
 			//wait five seconds
 			System.out.println("The current clock is: " + theRF.clock());
 		}
-
+*/
 		while(true){
 			
 			beaconFreq = LinkLayer.setBeacFreq;
@@ -132,7 +132,7 @@ public class Sthread implements Runnable {
 			}
 			
 			//sending beacons
-			if(((theRF.clock()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
+			if(((theRF.clock()+Rthread.fudge.get()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
 				//send another beacon
 				sendingBeacon = true;
 				//give to BuildPacket
@@ -141,10 +141,10 @@ public class Sthread implements Runnable {
 				//adding the current local time ***added time to create and transmit****
 				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
 				System.out.println("Sending a BEACON!");
-				System.out.println("The current local time is: " + theRF.clock());
+				System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
 				theRF.transmit(beacon);
 				//start timer 
-				lastBeacon = theRF.clock();
+				lastBeacon = theRF.clock()+Rthread.fudge.get();
 				//reset destination add for further use
 				byte [] blah = new byte[1];
 				BuildPacket.build(blah, (short)0, (short)0, (short)0);
@@ -191,7 +191,7 @@ public class Sthread implements Runnable {
 						abqSendAck.add(wholePacket);
 					}
 
-					while(((sendTime !=0 )&&(theRF.clock()-sendTime) < timeoutLimit) && notACKed){
+					while(((sendTime !=0 )&&(theRF.clock()+Rthread.fudge.get()-sendTime) < timeoutLimit) && notACKed){
 						//check if we received an ACK
 						if(BuildPacket.rcvACK.get()){
 							//check that the ACK was for the packet we just sent
@@ -210,7 +210,7 @@ public class Sthread implements Runnable {
 									//update status
 									LinkLayer.setStatus.set(4); //TX_DELIVERED
 									//stop the time
-									rcvTime = theRF.clock();
+									rcvTime = theRF.clock()+Rthread.fudge.get();
 									//remove the acked packet from the ABQ holding it
 									try {
 										abqSendAck.take();
@@ -251,7 +251,7 @@ public class Sthread implements Runnable {
 								//not transmitting right now
 								busy = false;
 								//wait DIFS
-								if(theRF.getIdleTime() > difs)
+								if(theRF.getIdleTime() > difs+((theRF.clock()+Rthread.fudge.get())%50))
 								{
 									LinkLayer.diagOut("Waiting DIFS");
 									//Check if open
@@ -273,7 +273,7 @@ public class Sthread implements Runnable {
 								theRF.transmit(abqSendAck.element());
 								numRetry = numRetry + 1; //count this retry
 								//record when it was sent
-								sendTime = theRF.clock();
+								sendTime = theRF.clock()+Rthread.fudge.get();
 								LinkLayer.diagOut("Transmit Frame0: Sent Packet");
 							}
 						}
@@ -282,7 +282,7 @@ public class Sthread implements Runnable {
 
 						//wait IFS, Still idle?
 						//wait DIFS
-						if(theRF.getIdleTime() > difs)
+						if(theRF.getIdleTime() > difs+((theRF.clock()+Rthread.fudge.get())%50))
 						{
 							LinkLayer.diagOut("Waiting DIFS");
 
@@ -301,7 +301,7 @@ public class Sthread implements Runnable {
 									//not transmitting right now
 									busy = false;
 									//wait DIFS
-									if(theRF.getIdleTime() > difs)
+									if(theRF.getIdleTime() > difs+((theRF.clock()+Rthread.fudge.get())%50))
 									{
 										LinkLayer.diagOut("Waiting DIFS");
 										//Check if open
@@ -331,7 +331,7 @@ public class Sthread implements Runnable {
 									theRF.transmit(abqSendAck.element());
 									numRetry = numRetry + 1; //count this retry
 									//record when it was sent
-									sendTime = theRF.clock();
+									sendTime = theRF.clock()+Rthread.fudge.get();
 									LinkLayer.diagOut("Transmit Frame1: Sent Packet");
 
 
@@ -342,7 +342,7 @@ public class Sthread implements Runnable {
 							//send the data
 							theRF.transmit(abqSendAck.element());
 							//record when it was sent
-							sendTime = theRF.clock();
+							sendTime = theRF.clock()+Rthread.fudge.get();
 							LinkLayer.diagOut("Transmit Frame2: Sent Packet");
 							numRetry = numRetry + 1;
 						}

@@ -76,12 +76,12 @@ public class Rthread implements Runnable {
 				recPac = theRF.receive();
 
 				//******TIMING TEST****
-				System.out.println("The recieveing time is: " +theRF.clock());
+				System.out.println("The recieveing time is: " +theRF.clock()+fudge.get());
 
 				//check to see if something was received
 				if (recPac.length != 0){
 					//then something was received and we need to figure out what it is
-					rcvTime = theRF.clock();
+					rcvTime = theRF.clock()+fudge.get();
 					//BuildPacket bp = new BuildPacket(recPac);
 					//"shred" it to get all the pieces of the packet
 					//bp.shred(recPac);
@@ -116,9 +116,12 @@ public class Rthread implements Runnable {
 							byte [] timeStamp = BuildPacket.retRecData(recPac);
 							//get long and compare
 							long bTime = ByteBuffer.wrap(timeStamp).getLong();
-							if( bTime < theRF.clock()){
-								//send a beacon
-								
+							if( bTime < theRF.clock()+fudge.get()){
+								byte[] temp = new byte[8];
+								byte[] beacon = BuildPacket.build(temp,(short) -1, LinkLayer.ourMAC, (short)16384);
+								System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
+								  crcVal.update(beacon,0,beacon.length-4);
+					              System.arraycopy(BuildPacket.bitshiftcrc(crcVal.getValue()), 0, beacon, 14, 4);
 							}else{
 								//update fudge factor
 								fudge.set((long)(fudge.get() + bTime - theRF.clock() + fudge.get()));

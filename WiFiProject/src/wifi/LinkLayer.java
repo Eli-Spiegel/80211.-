@@ -136,7 +136,7 @@ public class LinkLayer implements Dot11Interface {
 			e.printStackTrace();
 		}
 		output.println("Data received from: " + t.getSourceAddr());
-		output.println("Tx starting from host " + t.getSourceAddr() + " at local time " + theRF.clock());
+		output.println("Tx starting from host " + t.getSourceAddr() + " at local time " + theRF.clock()+Rthread.fudge.get());
 		output.println("From " + String.valueOf(t.getSourceAddr()) + ": " + thetext);
 
 		return BuildPacket.recData.length;
