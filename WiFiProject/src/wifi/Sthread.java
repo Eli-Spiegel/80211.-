@@ -80,22 +80,7 @@ public class Sthread implements Runnable {
 		minCWin = theRF.aCWmin;
 		maxCWin = theRF.aCWmax;
 		beaconFreq = LinkLayer.setBeacFreq;
-
-		if(LinkLayer.fixedWin.get()==true){
-			//use max everytime
-			expBackOff = maxCWin;
-			//will select the maximum value each time
-			//(maximum that the collision window allows)
-		}else{
-			//will select a value w/in the current collision window
-			//randomly when waiting after DIFS has elapsed
-			expBackOff = randExpoBack.nextInt(maxCWin);
-		}
-
-
 	}
-
-
 
 	/**
 	 * After an initial line of ouptut, the run() method here just loops forever,
@@ -156,10 +141,8 @@ public class Sthread implements Runnable {
 			while(!abqSendAck.isEmpty() && !sendingBeacon){
 
 				/*
-				 * NOTNOT
-					as long as we haven't received an ACK, haven't
-					timed out, and haven't hit our retry limit,
-					keep re-sending the packet at intervals
+				 * as long as we haven't hit the retry limit, been acked,
+				 * or haven't increased the expBackOff too much...
 				 */
 				while(numRetry<retryLimit && notACKed && (expBackOff<maxCWin)){	
 
@@ -235,7 +218,6 @@ public class Sthread implements Runnable {
 						}
 					}
 
-
 					if(notACKed){
 						//keep sending
 
@@ -302,7 +284,7 @@ public class Sthread implements Runnable {
 									//not transmitting right now
 									busy = false;
 									//wait DIFS
-									if(theRF.getIdleTime() > difs+((theRF.clock()+Rthread.fudge.get())%50))
+									if(theRF.getIdleTime() > difs+(50-((theRF.clock()+Rthread.fudge.get())%50)))
 									{
 										LinkLayer.diagOut("Waiting DIFS");
 										//Check if open
@@ -319,12 +301,20 @@ public class Sthread implements Runnable {
 
 								//wait exponential back-off time
 
-								try {
-									Thread.sleep(randExpoBack.nextInt(expBackOff));
-								} catch (InterruptedException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
+								//check which wait type we should use (random or fixed)
+								if(LinkLayer.fixedWin.get() == true){
+									try {
+										//COMMAND 2 SET TO FIXED
+										Thread.sleep(randExpoBack.nextInt(expBackOff));
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								}else{
+									//pick the greatest (expbackoff)
+									Thread.sleep(expBackOff);
 								}
+
 								LinkLayer.diagOut("Waited exponential backoff time while medium idle.");
 								//for next window size
 								expBackOff = expBackOff *2;
@@ -371,11 +361,6 @@ public class Sthread implements Runnable {
 					sendTime=0;
 					//update Status
 					LinkLayer.setStatus.set(5);//TX_FAILED
-				}
-
-				//check to see if we received and ACK
-				if(BuildPacket.rcvACK.get()){
-					LinkLayer.diagOut("We recieved an ACK! Is it ours?");
 				}
 
 				expBackOff = minCWin;

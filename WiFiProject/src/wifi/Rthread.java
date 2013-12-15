@@ -141,9 +141,6 @@ public class Rthread implements Runnable {
 							isData = true;
 							LinkLayer.diagOut("Received a data packet.");
 							
-							
-							
-							
 							if(!theRTable.containsKey(recSrcAdd))
 							{
 								//we haven't see this address yet so 
