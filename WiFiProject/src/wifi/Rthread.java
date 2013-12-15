@@ -115,10 +115,11 @@ public class Rthread implements Runnable {
 							//beacon packet
 							//get 8-14 bytes
 							byte [] timeStamp = BuildPacket.retRecData(recPac);
-							 ByteBuffer btime = ByteBuffer.allocate(8);
-							    btime.putLong(ByteBuffer.wrap(timeStamp).getLong());
-							System.out.println(btime);
-							if( btime.getLong() < (theRF.clock()+fudge.get())){
+							 ByteBuffer buffer = ByteBuffer.allocate(8);
+							    buffer.putLong(ByteBuffer.wrap(timeStamp).getLong());
+							System.out.println(buffer);
+							long btime= buffer.getLong();
+							if( btime < (theRF.clock()+fudge.get())){
 								//send beacon
 							
 								byte[] beacon = BuildPacket.build(BuildPacket.bitshifttime(theRF.clock()+(long)100010 + Rthread.fudge.get()),(short) -1, LinkLayer.ourMAC, (short)16384);
@@ -126,10 +127,10 @@ public class Rthread implements Runnable {
 					              System.out.println(ByteBuffer.wrap(BuildPacket.retRecData(beacon)).getLong());
 					              LinkLayer.diagOut("Sending another beacon.");
 							}
-							if(btime.getLong() > theRF.clock()+fudge.get()){
+							if(btime > theRF.clock()+fudge.get()){
 								//theirs>our
 								//update fudge factor
-								fudge.set((long)( btime.getLong() - theRF.clock()));
+								fudge.set((long)( btime - theRF.clock()));
 								LinkLayer.diagOut("Updated our fudge factor to the beacon's");
 							}
 							
