@@ -110,7 +110,7 @@ public class Rthread implements Runnable {
 						LinkLayer.diagOut("The packet is for us!");
 						//check what type of packet we are receiving
 						
-						if(recFrameType == 2){
+						if(recFrameType == 16384){
 							//beacon packet
 							//get 8-14 bytes
 							byte [] timeStamp = BuildPacket.retRecData(recPac);
@@ -120,7 +120,7 @@ public class Rthread implements Runnable {
 								//send beacon
 								byte[] temp = new byte[8];
 								byte[] beacon = BuildPacket.build(temp,(short) -1, LinkLayer.ourMAC, (short)16384);
-								System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
+								System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)900 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
 								  crcVal.update(beacon,0,beacon.length-4);
 					              System.arraycopy(BuildPacket.bitshiftcrc(crcVal.getValue()), 0, beacon, 14, 4);
 					              theRF.transmit(beacon);
