@@ -3,6 +3,7 @@ package wifi;
 import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -114,21 +115,21 @@ public class Rthread implements Runnable {
 							//beacon packet
 							//get 8-14 bytes
 							byte [] timeStamp = BuildPacket.retRecData(recPac);
-							//get long and compare
-							long bTime = ByteBuffer.wrap(timeStamp).getLong();
-							if( bTime < theRF.clock()+fudge.get()){
+							 ByteBuffer btime = ByteBuffer.allocate(8);
+							    btime.putLong(ByteBuffer.wrap(timeStamp).getLong());
+							System.out.println(btime);
+							if( btime.getLong() < (theRF.clock()+fudge.get())){
 								//send beacon
-								byte[] temp = new byte[8];
-								byte[] beacon = BuildPacket.build(temp,(short) -1, LinkLayer.ourMAC, (short)16384);
-								System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)900 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
-								  crcVal.update(beacon,0,beacon.length-4);
-					              System.arraycopy(BuildPacket.bitshiftcrc(crcVal.getValue()), 0, beacon, 14, 4);
+							
+								byte[] beacon = BuildPacket.build(BuildPacket.bitshifttime(theRF.clock()+(long)100010 + Rthread.fudge.get()),(short) -1, LinkLayer.ourMAC, (short)16384);
 					              theRF.transmit(beacon);
+					              System.out.println(ByteBuffer.wrap(BuildPacket.retRecData(beacon)).getLong());
 					              LinkLayer.diagOut("Sending another beacon.");
-							}else{
+							}
+							if(btime.getLong() > theRF.clock()+fudge.get()){
 								//theirs>our
 								//update fudge factor
-								fudge.set((long)(fudge.get() + bTime - theRF.clock() + fudge.get()));
+								fudge.set((long)( btime.getLong() - theRF.clock()));
 								LinkLayer.diagOut("Updated our fudge factor to the beacon's");
 							}
 							

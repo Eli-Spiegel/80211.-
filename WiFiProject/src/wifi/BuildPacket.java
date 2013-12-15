@@ -159,7 +159,18 @@ public static byte[] bitshiftcrc(long longs ) {
      bytes[0]= (byte)((longs >> 8)& 0xff);
 	    return bytes;
 }
-        
+public static byte[] bitshifttime(long longs ) {
+	 byte[] bytes = new byte[8];
+	 bytes[7] = (byte)(longs & 0xff);
+	 bytes[6] = (byte)((longs>>8) & 0xff);
+	  bytes[5]= (byte)((longs >> 8)& 0xff);
+	 bytes[4]= (byte)((longs >> 8)& 0xff);
+	 bytes[3]= (byte)((longs >> 8)& 0xff);
+    bytes[2]= (byte)((longs >> 8)& 0xff);
+    bytes[1]= (byte)((longs >> 8)& 0xff);
+    bytes[0]= (byte)((longs >> 8)& 0xff);
+	    return bytes;
+}
 
 
         /**
@@ -179,7 +190,6 @@ public static byte[] bitshiftcrc(long longs ) {
                 rcvData.getAndSet(false);
                 rcvACK.getAndSet(false);
                 rcvBeacon.getAndSet(false);
-                rcvCTS.getAndSet(false);
                 rcvRTS.getAndSet(false);
                 recFrameType[0] = recData[0];
                 recFrameType[0] = (byte) (recFrameType[0] & 0xE0);

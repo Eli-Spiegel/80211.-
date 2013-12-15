@@ -28,8 +28,8 @@ public class Sthread implements Runnable {
 	//public static boolean timedOut = false;
 	private double slotTime;
 	private int expBackOff;
-	private double difs;
-	private double sifs;
+	private long difs;
+	private long sifs;
 	private int retryLimit;
 	private int numRetry = 0;
 	private int maxPacketLength;//in bytes
@@ -70,14 +70,14 @@ public class Sthread implements Runnable {
 		//to hold sent packets waiting to be acked
 		ablockQSent = abq;
 		this.theRF=theRF;
-		difs = 0.500;//is this right?
+		difs =5000;//is this right?
 		sifs = theRF.aSIFSTime;
 		slotTime = theRF.aSlotTime;
 		retryLimit = theRF.dot11RetryLimit;
 		maxPacketLength = theRF.aMPDUMaximumLength;
 		sendTime = 0;
 		//experimental roundtrip time plus IEEE saftey margin, difs
-		timeoutLimit = (long) (7978 + difs);
+		timeoutLimit = (long) (18020 + difs);
 		minCWin = theRF.aCWmin;
 		maxCWin = theRF.aCWmax;
 		beaconFreq = LinkLayer.setBeacFreq;
@@ -92,7 +92,7 @@ public class Sthread implements Runnable {
 
 		boolean busy = false; //for checking ability to send
 		boolean notACKed = true;
-		while(firstTime){
+		if(firstTime){
 			if(((theRF.clock()+Rthread.fudge.get()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
 				//send another beacon
 				sendingBeacon = true;
@@ -100,7 +100,7 @@ public class Sthread implements Runnable {
 				byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16384);
 				byte[] temp = new byte[8];
 				//adding the current local time ***added time to create and transmit****
-				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
+				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)660 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
 				System.out.println("Sending a BEACON!");
 				System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
 				theRF.transmit(beacon);
@@ -150,7 +150,7 @@ public class Sthread implements Runnable {
 					byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16384);
 					byte[] temp = new byte[8];
 					//adding the current local time ***added time to create and transmit****
-					System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
+					System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)0 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
 					System.out.println("Sending a BEACON!");
 					System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
 					theRF.transmit(beacon);
