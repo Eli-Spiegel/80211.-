@@ -312,7 +312,7 @@ public static byte[] bitshifttime(long longs ) {
          * @param 
          * @return
          */
-        public static byte[] retRecData(byte[] recDataP){
+        public static byte[] retRecData(byte[] recData){
                 //data is in bytes 6 till end -4
                 int byteCounter = 6; //start at beginning of data
                 int addCounter = 0;
