@@ -147,7 +147,7 @@ public class Sthread implements Runnable {
 					//send another beacon
 					sendingBeacon = true;
 					//give to BuildPacket
-					byte[] ourtime = BuildPacket.bitshifttime(theRF.clock()+(long)10000 + Rthread.fudge.get());
+					byte[] ourtime = BuildPacket.bitshifttime(theRF.clock()+(long)9010 + Rthread.fudge.get());
 					byte[] beacon = BuildPacket.build(ourtime,(short) -1, LinkLayer.ourMAC, (short)16384);
 					
 					//adding the current local time ***added time to create and transmit****
