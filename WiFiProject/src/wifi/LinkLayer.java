@@ -140,7 +140,7 @@ public class LinkLayer implements Dot11Interface {
 		output.println("Tx starting from host " + t.getSourceAddr() + " at local time " + theRF.clock()+Rthread.fudge.get());
 		output.println("From " + String.valueOf(t.getSourceAddr()) + ": " + thetext);
 
-		return BuildPacket.recData.length;
+		return recThread.getData().length;
 		//****
 		//writes the incoming data and address information 
 		//into the Transmission instance passed as argument
