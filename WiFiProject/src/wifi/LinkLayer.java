@@ -92,6 +92,7 @@ public class LinkLayer implements Dot11Interface {
 				//Queue is full!!!
 				//set status
 				setStatus.set(10);//INSUFFICIENT_BUFFEER_SPACE
+				diagOut("Couldn't send because the queue is already full.");
 				return 0;
 			}
 			

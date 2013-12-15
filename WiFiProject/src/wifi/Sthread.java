@@ -80,19 +80,19 @@ public class Sthread implements Runnable {
 		minCWin = theRF.aCWmin;
 		maxCWin = theRF.aCWmax;
 		beaconFreq = LinkLayer.setBeacFreq;
-		
+
 		if(LinkLayer.fixedWin.get()==true){
 			//use max everytime
 			expBackOff = maxCWin;
 			//will select the maximum value each time
-  		  	//(maximum that the collision window allows)
+			//(maximum that the collision window allows)
 		}else{
 			//will select a value w/in the current collision window
-  		  	//randomly when waiting after DIFS has elapsed
+			//randomly when waiting after DIFS has elapsed
 			expBackOff = randExpoBack.nextInt(maxCWin);
 		}
-		
-		
+
+
 	}
 
 
@@ -114,9 +114,9 @@ public class Sthread implements Runnable {
 			//wait five seconds
 			System.out.println("The current clock is: " + theRF.clock());
 		}
-*/
+		 */
 		while(true){
-			
+
 			beaconFreq = LinkLayer.setBeacFreq;
 
 			if(!ablockQSent.isEmpty()){
@@ -130,7 +130,7 @@ public class Sthread implements Runnable {
 					e.printStackTrace();
 				}
 			}
-			
+
 			//sending beacons
 			if(((theRF.clock()+Rthread.fudge.get()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
 				//send another beacon
@@ -162,16 +162,16 @@ public class Sthread implements Runnable {
 					keep re-sending the packet at intervals
 				 */
 				while(numRetry<retryLimit && notACKed && (expBackOff<maxCWin)){	
-					
-				//if it is a beacon we only need to send it once
+
+					//if it is a beacon we only need to send it once
 					if(sendingBeacon == true){
 						//set the numRetry so we won't keep sending
 						numRetry = retryLimit;
 						//reset the boolean
 						sendingBeacon = false;
-						
+
 					}
-					
+
 					//do we need to flip the retry bit
 					if(numRetry==1){
 						byte[] wholePacket = new byte[2048];
@@ -191,6 +191,7 @@ public class Sthread implements Runnable {
 						abqSendAck.add(wholePacket);
 					}
 
+					//as long as we sent something and we haven't timed out and we haven't been acked
 					while(((sendTime !=0 )&&(theRF.clock()+Rthread.fudge.get()-sendTime) < timeoutLimit) && notACKed){
 						//check if we received an ACK
 						if(BuildPacket.rcvACK.get()){
@@ -233,7 +234,7 @@ public class Sthread implements Runnable {
 							e.printStackTrace();
 						}
 					}
-					
+
 
 					if(notACKed){
 						//keep sending
@@ -317,25 +318,25 @@ public class Sthread implements Runnable {
 								LinkLayer.diagOut("From SendThread(C) - Number of Retrys = " + numRetry);
 
 								//wait exponential back-off time
-								
+
 								try {
 									Thread.sleep(randExpoBack.nextInt(expBackOff));
 								} catch (InterruptedException e) {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
-									LinkLayer.diagOut("Waited exponential backoff time while medium idle.");
-									//for next window size
-									expBackOff = expBackOff *2;
-									//send the data
-									theRF.transmit(abqSendAck.element());
-									numRetry = numRetry + 1; //count this retry
-									//record when it was sent
-									sendTime = theRF.clock()+Rthread.fudge.get();
-									LinkLayer.diagOut("Transmit Frame1: Sent Packet");
+								LinkLayer.diagOut("Waited exponential backoff time while medium idle.");
+								//for next window size
+								expBackOff = expBackOff *2;
+								//send the data
+								theRF.transmit(abqSendAck.element());
+								numRetry = numRetry + 1; //count this retry
+								//record when it was sent
+								sendTime = theRF.clock()+Rthread.fudge.get();
+								LinkLayer.diagOut("Transmit Frame1: Sent Packet");
 
 
-								
+
 							}
 
 							LinkLayer.diagOut("The Medium is still idle.");
@@ -347,7 +348,7 @@ public class Sthread implements Runnable {
 							numRetry = numRetry + 1;
 						}
 
-						
+
 					}
 					LinkLayer.diagOut("Number of Retrys in Send: " + numRetry);
 				}
@@ -376,7 +377,7 @@ public class Sthread implements Runnable {
 				if(BuildPacket.rcvACK.get()){
 					LinkLayer.diagOut("We recieved an ACK! Is it ours?");
 				}
-				
+
 				expBackOff = minCWin;
 				LinkLayer.diagOut("Resetting exponential backoff to original.");
 			}
@@ -387,7 +388,7 @@ public class Sthread implements Runnable {
 
 
 	}
-	
+
 
 }
 
