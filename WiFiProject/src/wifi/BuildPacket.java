@@ -314,16 +314,9 @@ public static byte[] bitshifttime(long longs ) {
          */
         public static byte[] retRecData(byte[] recData){
                 //data is in bytes 6 till end -4
-                int byteCounter = 6; //start at beginning of data
-                int addCounter = 0;
-                while(byteCounter < (recData.length-4)){
-                        byte by = recData[byteCounter];
-                        recData[addCounter] = by;
-                        byteCounter = byteCounter +1;
-                        addCounter = addCounter +1;
-                }
-                
-                return recData;
+        	 byte [] ttime = new byte[recData.length-10];
+               System.arraycopy(recData, 6, ttime, 0, recData.length-10);
+                return ttime;
         }
 
         /**
