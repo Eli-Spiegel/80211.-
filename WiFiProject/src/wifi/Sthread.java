@@ -147,10 +147,11 @@ public class Sthread implements Runnable {
 					//send another beacon
 					sendingBeacon = true;
 					//give to BuildPacket
-					byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16384);
-					byte[] temp = new byte[8];
+					byte[] ourtime = BuildPacket.bitshifttime(theRF.clock()+(long)10000 + Rthread.fudge.get());
+					byte[] beacon = BuildPacket.build(ourtime,(short) -1, LinkLayer.ourMAC, (short)16384);
+					
 					//adding the current local time ***added time to create and transmit****
-					System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)10000 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
+				
 					System.out.println("Sending a BEACON!");
 					System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
 					theRF.transmit(beacon);
