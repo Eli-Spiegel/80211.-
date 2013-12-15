@@ -116,6 +116,7 @@ public class Rthread implements Runnable {
 							//get 8-14 bytes
 							byte [] timeStamp = BuildPacket.retRecData(recPac);
 							ByteBuffer buf = ByteBuffer.wrap(timeStamp);
+							//make sure we are at the start of the buffer
 							buf.rewind();
 							Long btime = buf.getLong();
 							if( btime< (theRF.clock()+fudge.get())){
