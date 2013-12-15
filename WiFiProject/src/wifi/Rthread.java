@@ -116,8 +116,8 @@ public class Rthread implements Runnable {
 							//get 8-14 bytes
 							byte [] timeStamp = BuildPacket.retRecData(recPac);
 							 ByteBuffer buffer = ByteBuffer.allocate(8);
-							    buffer.putLong(ByteBuffer.wrap(timeStamp).getLong());
-							System.out.println(buffer);
+							    buffer.put(timeStamp);
+							System.out.println(buffer.toString());
 							long btime= buffer.getLong();
 							if( btime < (theRF.clock()+fudge.get())){
 								//send beacon

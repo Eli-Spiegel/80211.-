@@ -155,20 +155,20 @@ public static byte[] bitshiftcrc(long longs ) {
 	 byte[] bytes = new byte[4];
 	 bytes[3] = (byte)(longs & 0xff);
      bytes[2]= (byte)((longs >> 8)& 0xff);
-     bytes[1]= (byte)((longs >> 8)& 0xff);
-     bytes[0]= (byte)((longs >> 8)& 0xff);
+     bytes[1]= (byte)((longs >> 16)& 0xff);
+     bytes[0]= (byte)((longs >> 32)& 0xff);
 	    return bytes;
 }
 public static byte[] bitshifttime(long longs ) {
 	 byte[] bytes = new byte[8];
 	 bytes[7] = (byte)(longs & 0xff);
 	 bytes[6] = (byte)((longs>>8) & 0xff);
-	  bytes[5]= (byte)((longs >> 8)& 0xff);
-	 bytes[4]= (byte)((longs >> 8)& 0xff);
-	 bytes[3]= (byte)((longs >> 8)& 0xff);
-    bytes[2]= (byte)((longs >> 8)& 0xff);
-    bytes[1]= (byte)((longs >> 8)& 0xff);
-    bytes[0]= (byte)((longs >> 8)& 0xff);
+	  bytes[5]= (byte)((longs >> 16)& 0xff);
+	 bytes[4]= (byte)((longs >> 32)& 0xff);
+	 bytes[3]= (byte)((longs >> 64)& 0xff);
+    bytes[2]= (byte)((longs >> 128)& 0xff);
+    bytes[1]= (byte)((longs >> 256)& 0xff);
+    bytes[0]= (byte)((longs >> 512)& 0xff);
 	    return bytes;
 }
 
