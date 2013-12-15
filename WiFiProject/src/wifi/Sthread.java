@@ -75,8 +75,8 @@ public class Sthread implements Runnable {
 		retryLimit = theRF.dot11RetryLimit;
 		maxPacketLength = theRF.aMPDUMaximumLength;
 		sendTime = 0;
-		//**experimental roundtrip time (ADD IEEE saftey margin!!)**
-		timeoutLimit = 7978;
+		//experimental roundtrip time plus IEEE saftey margin, difs
+		timeoutLimit = (long) (7978 + difs);
 		minCWin = theRF.aCWmin;
 		maxCWin = theRF.aCWmax;
 		beaconFreq = LinkLayer.setBeacFreq;
@@ -251,7 +251,7 @@ public class Sthread implements Runnable {
 								//not transmitting right now
 								busy = false;
 								//wait DIFS
-								if(theRF.getIdleTime() > difs+((theRF.clock()+Rthread.fudge.get())%50))
+								if(theRF.getIdleTime() > difs+(50 - ((theRF.clock()+Rthread.fudge.get())%50)))
 								{
 									LinkLayer.diagOut("Waiting DIFS");
 									//Check if open
