@@ -172,19 +172,6 @@ public static byte[] bitshifttime(long longs ) {
 	    return bytes;
 }
 
-public static long bitshifttime2(long longs ) {
-	 long ret= 0;
-	ret  = (byte)(longs & 0xff);
-	 ret= (byte)((longs >> 8) & 0xff);
-	 ret= (byte)((longs >> 16)& 0xff);
-	 ret= (byte)((longs >> 24)& 0xff);
-	 ret= (byte)((longs >> 32)& 0xff);
-   ret= (byte)((longs >> 40)& 0xff);
-   ret= (byte)((longs >> 48)& 0xff);
-   ret= (byte)((longs >> 56)& 0xff);
-	    return ret;
-}
-
 
         /**
          * Gets the frame type of a received packet.
