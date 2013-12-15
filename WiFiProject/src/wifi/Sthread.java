@@ -48,6 +48,7 @@ public class Sthread implements Runnable {
 	//for sending a beacon only once
 	private boolean sendingBeacon = false;
 	private Checksum crcVal = new CRC32();
+	boolean firstTime = true;
 	//need an array for addresses and sequence numbers
 	//the order of packets interchanging with each address
 	//increments on sending new packets
@@ -91,7 +92,26 @@ public class Sthread implements Runnable {
 
 		boolean busy = false; //for checking ability to send
 		boolean notACKed = true;
-
+		while(firstTime){
+			if(((theRF.clock()+Rthread.fudge.get()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
+				//send another beacon
+				sendingBeacon = true;
+				//give to BuildPacket
+				byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16384);
+				byte[] temp = new byte[8];
+				//adding the current local time ***added time to create and transmit****
+				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
+				System.out.println("Sending a BEACON!");
+				System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
+				theRF.transmit(beacon);
+				//start timer 
+				lastBeacon = theRF.clock()+Rthread.fudge.get();
+				//reset destination add for further use
+				firstTime=false;
+			
+				
+			}
+		}
 		/*//*****TIMING TEST****
 		//loop to make sure both clocks are running
 		long timer = theRF.clock();
@@ -117,29 +137,30 @@ public class Sthread implements Runnable {
 			}
 
 			//sending beacons
-			if(((theRF.clock()+Rthread.fudge.get()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
-				//send another beacon
-				sendingBeacon = true;
-				//give to BuildPacket
-				byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16384);
-				byte[] temp = new byte[8];
-				//adding the current local time ***added time to create and transmit****
-				System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
-				System.out.println("Sending a BEACON!");
-				System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
-				theRF.transmit(beacon);
-				//start timer 
-				lastBeacon = theRF.clock()+Rthread.fudge.get();
-				//reset destination add for further use
-				byte [] blah = new byte[1];
-				BuildPacket.build(blah, (short)0, (short)0, (short)0);
-				numRetry = 5;
-			}
+			
 
 
 			//as long as there is something to send
 			while(!abqSendAck.isEmpty() && !sendingBeacon){
-
+				
+				if(((theRF.clock()+Rthread.fudge.get()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
+					//send another beacon
+					sendingBeacon = true;
+					//give to BuildPacket
+					byte[] beacon = BuildPacket.build(blankBeacon,(short) -1, LinkLayer.ourMAC, (short)16384);
+					byte[] temp = new byte[8];
+					//adding the current local time ***added time to create and transmit****
+					System.arraycopy(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)3989 + Rthread.fudge.get()).array(), 0, beacon, 6, 8);
+					System.out.println("Sending a BEACON!");
+					System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
+					theRF.transmit(beacon);
+					//start timer 
+					lastBeacon = theRF.clock()+Rthread.fudge.get();
+					//reset destination add for further use
+					byte [] blah = new byte[1];
+				
+					numRetry = 5;
+				}
 				/*
 				 * as long as we haven't hit the retry limit, been acked,
 				 * or haven't increased the expBackOff too much...
@@ -312,7 +333,12 @@ public class Sthread implements Runnable {
 									}
 								}else{
 									//pick the greatest (expbackoff)
-									Thread.sleep(expBackOff);
+									try {
+										Thread.sleep(expBackOff);
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
 								}
 
 								LinkLayer.diagOut("Waited exponential backoff time while medium idle.");
@@ -348,7 +374,7 @@ public class Sthread implements Runnable {
 					LinkLayer.diagOut("Hit retry limit.");
 					//we need to stop trying to send this packet
 					//and remove it from the ArrayBlockingQueue
-
+					numRetry = 0;
 					try {
 						abqSendAck.take();
 					} catch (InterruptedException e) {
@@ -356,7 +382,7 @@ public class Sthread implements Runnable {
 						e.printStackTrace();
 					}
 					//then we should reset the numRetry
-					numRetry = 0;
+					
 					//we should also stop our timer
 					sendTime=0;
 					//update Status
