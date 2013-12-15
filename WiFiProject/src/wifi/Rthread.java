@@ -121,7 +121,7 @@ public class Rthread implements Runnable {
 								//send beacon
 								//System.out.println(theRF.clock()+(long)100010 + Rthread.fudge.get());
 								buf.clear();
-								buf.putLong((theRF.clock()+(long)100010 + Rthread.fudge.get())).array();
+								buf.putLong((theRF.clock()+(long)9010 + Rthread.fudge.get())).array();
 								byte[] ourtime = buf.array();
 								byte[] beacon = BuildPacket.build(ourtime,(short) -1, LinkLayer.ourMAC, (short)16384);
 					              theRF.transmit(beacon);
