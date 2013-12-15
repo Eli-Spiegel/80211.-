@@ -391,7 +391,7 @@ public class WiFiClient implements ActionListener, Runnable {
          System.out.println("Using MAC address of "+mac+" as requested.");
       }
       else {
-         mac = (short)(rand.nextInt(100)+801);
+         mac = (short)(rand.nextInt(200)+801);
          System.out.println("Using a random MAC address: "+mac);
       }
 
