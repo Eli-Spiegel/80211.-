@@ -235,7 +235,13 @@ public class Sthread implements Runnable {
 							while(busy){
 								LinkLayer.diagOut("Send Thread - Wait until current transmission ends.");
 								while(theRF.inUse()){
-									//wait until current transmission ends	
+									try {
+										Thread.sleep(9010);
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+										LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
+									}	
 									LinkLayer.diagOut("Send Thread - Waiting for transmission to end.");
 								}
 								//not transmitting right now

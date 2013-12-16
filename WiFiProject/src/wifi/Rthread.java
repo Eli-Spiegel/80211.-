@@ -142,14 +142,20 @@ public class Rthread implements Runnable {
 								theRTable.put(recSrcAdd, (short) 0);
 							}
 							//receiving from an old address? 
-							if(theRTable.get(recSrcAdd) <= recSeqNum || (theRTable.get(recSrcAdd)>4090 && (recSeqNum<10))){
+							if(theRTable.get(recSrcAdd) <= recSeqNum || ((theRTable.get(recSrcAdd)>4090 && (recSeqNum<10)))){
 
 								if(!(theRTable.get(recSrcAdd)==recSeqNum-1) && recSeqNum!=0)
 								{
 									//sequence numbers are out of order
 									LinkLayer.diagOut("Receive Thread - There is a gap in the sequence numbers!");
 								}
-
+								
+								if(isData = true){
+									//add the data to the ABQ
+									recABQ.add(recData);
+									dataInQ = true;
+								}
+								
 								//prepare the ack packet
 								byte[] theackpacket = new byte[10];
 								theackpacket= BuildPacket.sixbytes(recPac); //get the addresses and such
@@ -212,11 +218,7 @@ public class Rthread implements Runnable {
 								}
 
 								//if data packet, need to put into an A.B.Q. to be accessed in LinkLayer
-								if(isData = true){
-									//add the data to the ABQ
-									recABQ.add(recData);
-									dataInQ = true;
-								}
+								
 								//reset booleans
 								isData = false;
 							}
