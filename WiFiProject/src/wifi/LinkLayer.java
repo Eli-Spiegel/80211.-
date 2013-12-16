@@ -51,6 +51,7 @@ public class LinkLayer implements Dot11Interface {
 		this.ourMAC = ourMAC;
 		this.output = output;      
 		theRF = new RF(null, null);
+
 		//make an instance of the send tread with array of packets to be sent
 		sendThread = new Sthread(theRF, sendBlocQ);
 		//start the send thread
@@ -79,6 +80,12 @@ public class LinkLayer implements Dot11Interface {
 			output.println("LinkLayer: Sending "+len+" bytes to "+dest);
 			//keep sending
 
+			if(sendBlocQ.size() < 0){
+				//buffer size is negative
+				//update status
+				setStatus.set(6);//BAD_BUFFER_SIZE
+			}
+			
 			//only add to the Q if it isn't full
 			if(sendBlocQ.size() < 5){
 
@@ -92,10 +99,10 @@ public class LinkLayer implements Dot11Interface {
 				//Queue is full!!!
 				//set status
 				setStatus.set(10);//INSUFFICIENT_BUFFEER_SPACE
-				diagOut("Couldn't send because the queue is already full.");
+				diagOut("Couldn't send because the queue is already full! Just wait a sec!");
 				return 0;
 			}
-			
+
 		}
 
 		return len;
@@ -109,12 +116,8 @@ public class LinkLayer implements Dot11Interface {
 	 */
 	public int recv(Transmission t) {
 		output.println("LinkLayer: Pretending to block on recv()");
-		//data is in A.B.Q.
-
-		output.println("Recieve in LinkLAYER????");
-
-
-		//output.println(recBlocQ);
+		
+		//get the received data from the Rthread
 		t.setBuf(recThread.getData());
 		t.setDestAddr(recThread.getDestAdd());
 		t.setSourceAddr(recThread.getSrcAdd());
@@ -126,28 +129,22 @@ public class LinkLayer implements Dot11Interface {
 		   // TODO Auto-generated catch block
 		   e.printStackTrace();
 	   }*/
-		System.out.println("data can be called from above");
+		diagOut("Link Layer - Data can be called from above");
 		String thetext= null;
-		//"block" until data is received
 		while(t.getDestAddr() == 0);
 		try {
 			thetext = new String(t.getBuf(),"US-ASCII");
 		} catch (UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			//update status
+			setStatus.set(2);//UNSPECIFIED ERROR
 		}
 		output.println("Data received from: " + t.getSourceAddr());
 		output.println("Tx starting from host " + t.getSourceAddr() + " at local time " + theRF.clock()+Rthread.fudge.get());
 		output.println("From " + String.valueOf(t.getSourceAddr()) + ": " + thetext);
 
-		return recThread.getData().length;
-		//****
-		//writes the incoming data and address information 
-		//into the Transmission instance passed as argument
-		//**
-
-		//while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.
-		//return 0;
+		return recThread.getData().length;//number of bytes received
 	}
 
 	/**
@@ -211,7 +208,7 @@ public class LinkLayer implements Dot11Interface {
 		output.println("LinkLayer: Sending command "+cmd+" with value "+val);
 
 		if(cmd == 0){
-			//Print current settings*****FINISH*****
+			//Print current settings
 			output.println("Command 0 Options and Settings - Values --> Ignored");
 			output.println("Command 1 Diagnostic Level - Values --> 0: Off , 1: On");
 			output.println("Command 2 Slot Selection - Values --> 0: Random, 1: Fixed at Max");
@@ -241,7 +238,6 @@ public class LinkLayer implements Dot11Interface {
 				diagOn.set(true);
 				output.println("Diagnostic Level is set to: ON ");
 			}
-
 		}
 
 		if (cmd == 2){
@@ -266,6 +262,8 @@ public class LinkLayer implements Dot11Interface {
 
 		if(cmd>3){
 			output.println("The command" + cmd + " is not supported by the Link Layer");
+			//update status
+			setStatus.set(9);//ILLEGAL_ARGUMENT
 		}
 
 		return 0;

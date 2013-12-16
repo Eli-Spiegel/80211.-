@@ -1,38 +1,38 @@
 package wifi;
 
-import java.lang.reflect.Array;
+import java.lang.reflect.Array; 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicBoolean; 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
-
 import rf.RF;
 
 /**
- * 
- * @author lswanson
- *
+ * This is a Thread that runs and checks for incoming
+ * packets and handles the decomposition of the packet
+ * contents.
+ * @author Eli Spiegel & Lauren Swanson
+ * @version 12/15/2013
  */
 public class Rthread implements Runnable {
 	private  byte[] recPac;
 	private  RF theRF;
-	private ArrayBlockingQueue <byte []> ACKablockQ = new ArrayBlockingQueue(10);
+	private ArrayBlockingQueue <byte []> ACKablockQ = new ArrayBlockingQueue<byte []>(10); 
 	private short recDestAdd;
 	private short recSrcAdd;
 	private short recFrameType;
 	private short recRetry;
 	private short recSeqNum;
 	private byte[] recData;
-	private short recCRC;
+	private short recCRC; 
 	private boolean isData = false;
-	//static to be used in send thread
-	public static long rcvTime;
-	private ArrayBlockingQueue <byte []> recABQ = new ArrayBlockingQueue(10);
+	public static long rcvTime;//static to be used in send thread
+	private ArrayBlockingQueue <byte []> recABQ = new ArrayBlockingQueue<byte []>(10);
 	private short ourMAC;
 	boolean dataInQ = false;
 	public short ackshort = 8192;
@@ -41,26 +41,21 @@ public class Rthread implements Runnable {
 	//for the timing fudge factor
 	static AtomicLong fudge = new AtomicLong();
 
-	//need an array for addresses and sequence numbers
-	//the order of packets interchanging with each address
-	//increments on receive new acceptable packet
-	//add to array if receive from new address
-
 	/**
-	 * A second constructor for the receiving thread
-	 * @param packet
-	 * @param dest
-	 * @param theRF
-	 * @param abq
+	 * This constructor is assigns variable to be used 
+	 * in handling incoming packets.
+	 * @param packet The entire incoming packet
+	 * @param ourAdd Our own address
+	 * @param theRF The RF layer being used
+	 * @param abq The Array Blocking Queue holding received packets.
 	 */
 	public Rthread(byte[]packet, short ourAdd, RF theRF, ArrayBlockingQueue abq)
 	{
-		//put recieved data here
-		recABQ = abq;
+		recABQ = abq; //will put received data here
 		ourMAC = ourAdd;
 		this.theRF = theRF;
-		recPac = packet;
-		rcvTime = 0;
+		recPac = packet; 
+		rcvTime = 0; // start at 0 until we receive something 
 	}
 
 
@@ -69,163 +64,144 @@ public class Rthread implements Runnable {
 	 * printing periodically as it goes. 
 	 */
 	public void run() {
-		LinkLayer.diagOut("Receive is alive and well");
+		LinkLayer.diagOut("Receive Thread is alive and well.");
 		while(true)
 		{
+			//see if there is incoming data for us in the RF layer
 			if(theRF.dataWaiting()){
-				//make a call to receive
-				recPac = theRF.receive();
-
-				//******TIMING TEST****
-				System.out.println("The recieveing time is: " +theRF.clock()+fudge.get());
-
-				//check to see if something was received
+				//there stuff for us! 
+				recPac = theRF.receive();//Make a call to receive!
+				
+				//did we actually get a packet with stuff in it?
 				if (recPac.length != 0){
-					//then something was received and we need to figure out what it is
-					rcvTime = theRF.clock()+fudge.get();
-					//BuildPacket bp = new BuildPacket(recPac);
-					//"shred" it to get all the pieces of the packet
-					//bp.shred(recPac);
-					//get some of the pieces from the packet
-
+					//Yep! We need to figure out what it is.
+					rcvTime = theRF.clock()+fudge.get();//set the received time
+					//print the time it was received
+					LinkLayer.diagOut("Recieve Thread - Recieved a packet at: "+rcvTime);
+					
 					//check if it is for us
 					recDestAdd = BuildPacket.retDestAd(recPac);
 					recSrcAdd = BuildPacket.retSrcAd(recPac);
-					LinkLayer.diagOut("Gathered incoming packet info from:" + recSrcAdd);
-
-					if(recDestAdd == ourMAC || recDestAdd == -1){
+					LinkLayer.diagOut("Recieve Thread - Incoming packet from:" + recSrcAdd);
+					
+					if(recDestAdd == ourMAC || recDestAdd == -1){ //it's for us or a beacon!
 
 						//each time this is called it starts with all false booleans for frame types 
 						recFrameType = BuildPacket.retFrameType(recPac);
 						recRetry = BuildPacket.retRetry(recPac);
 						recSeqNum = BuildPacket.retSeqNum(recPac);
 						recData = BuildPacket.retRecData(recPac);
-
-						LinkLayer.diagOut("the recDestAdd is: "+recDestAdd+" and the ourMAC is: " +ourMAC);
-
-						//check to see if the packet was for us
-						//turn compare each byte
-
-
-						//the packet is for us!
-						LinkLayer.diagOut("The packet is for us!");
+						//diagnostics
+						LinkLayer.diagOut("Recieve Thread - The incoming packet's desination address is " +recDestAdd);
+						LinkLayer.diagOut("Recieve Thread - The packet is for us!");
 						//check what type of packet we are receiving
-						
-						if(recFrameType == 16384){
-							//beacon packet
+
+						//is it a beacon?
+						if(recFrameType == 16384){ //yep!
 							//get 8-14 bytes
 							byte [] timeStamp = BuildPacket.retRecData(recPac);
 							ByteBuffer buf = ByteBuffer.wrap(timeStamp);
 							//make sure we are at the start of the buffer
 							buf.rewind();
+							//get the long value of the timestamp
 							Long btime = buf.getLong();
+							//should we update our clock or just send a response beacon?
 							if( btime< (theRF.clock()+fudge.get())){
 								//send beacon
-								//System.out.println(theRF.clock()+(long)100010 + Rthread.fudge.get());
-								buf.clear();
+								buf.clear();//reset the buffer for timestamps
+								//build our beacon
 								byte[] ourtime =BuildPacket.bitshifttime((theRF.clock()+(long)9010 + Rthread.fudge.get()));
-
 								byte[] beacon = BuildPacket.build(ourtime,(short) -1, LinkLayer.ourMAC, (short)16384);
-					              theRF.transmit(beacon);
-					              System.out.println(btime);
-					              LinkLayer.diagOut("Sending another beacon.");
+								theRF.transmit(beacon); //send the beacon
+								LinkLayer.diagOut("Receive Thread - The timestamp in the BEACON is "+btime);
+								LinkLayer.diagOut("Receive Thread - Sending a response beacon. We are ahead of them.");
 							}
+						
 							if(btime > theRF.clock()+fudge.get()){
-								//theirs>our
+								//we're behind them
 								//update fudge factor
 								fudge.set((long)( btime - theRF.clock()));
-								LinkLayer.diagOut("Updated our fudge factor to the beacon's");
+								LinkLayer.diagOut("Receive Thread - The timestamp in the BEACON is "+btime);
+								LinkLayer.diagOut("Receive Thread  - Updated our fudge factor to the beacon's time. They are ahead of us.");
 							}
-							
+
 						}
-						
-						
-						//BuildPacket.rcvData.getAndSet(false);
+
+						//what other type of packet could it be?
+
 						if(recFrameType==0){
 							//data packet!
 							isData = true;
-							LinkLayer.diagOut("Received a data packet.");
-							
+							LinkLayer.diagOut("Receive Thread - Received a data packet.");
+
+							//receiving from a new address?
 							if(!theRTable.containsKey(recSrcAdd))
 							{
 								//we haven't see this address yet so 
 								//add it and start seq num at 0
 								theRTable.put(recSrcAdd, (short) 0);
 							}
-							//handle sequence numbers from incoming packets 
+							//receiving from an old address? 
 							if(theRTable.get(recSrcAdd) <= recSeqNum || (theRTable.get(recSrcAdd)>4090 && (recSeqNum<10))){
-								System.out.println("i am printed!");
-								
 
 								if(!(theRTable.get(recSrcAdd)==recSeqNum-1) && recSeqNum!=0)
 								{
 									//sequence numbers are out of order
-									LinkLayer.diagOut("There is a gap in the sequence numbers!");
+									LinkLayer.diagOut("Receive Thread - There is a gap in the sequence numbers!");
 								}
 
-								 byte[] theackpacket = new byte[10];
-                                 theackpacket= BuildPacket.sixbytes(recPac);
-                                 
-                                  byte[] ackthing = BuildPacket.bitshift(ackshort);
-                                  ackthing[0]=(byte)(theackpacket[0] |(1<<5));
-                                  ackthing[1]=theackpacket[1];
-                                  byte[] theolddest= new byte[2];
-                                  byte[] theoldsrc= new byte[2];
-                                 byte[] thecrcarray= new byte[4];
-                                 byte[] thetemparray = new byte[6];
-                                 
-                                  
-                                  theoldsrc[0]=theackpacket[2];
-                                 theoldsrc[1]= theackpacket[3];
-                                 theolddest[0]=theackpacket[4];
-                                 theolddest[1]= theackpacket[5];
-                                 theackpacket = new byte[10];
-                                theackpacket[0]=ackthing[0];
-                                theackpacket[1]=ackthing[1];
-                                theackpacket[2]=theolddest[0];
-                                theackpacket[3]=theolddest[1];
-                               theackpacket[4]=theoldsrc[0];
-                               theackpacket[5]=theoldsrc[1];
-                                
-                                 System.arraycopy(theackpacket, 0, thetemparray, 0, 6);
-                                 crcVal.update(thetemparray,0,thetemparray.length);
-                                 thecrcarray = BuildPacket.bitshiftcrc(crcVal.getValue());
-                                 theackpacket[6]=thecrcarray[0];
-                                 theackpacket[7]=thecrcarray[1];
-                                theackpacket[8]=thecrcarray[2];
-                                theackpacket[9]=thecrcarray[3];
+								//prepare the ack packet
+								byte[] theackpacket = new byte[10];
+								theackpacket= BuildPacket.sixbytes(recPac); //get the addresses and such
+								byte[] ackthing = BuildPacket.bitshift(ackshort);
+								ackthing[0]=(byte)(theackpacket[0] |(1<<5));
+								ackthing[1]=theackpacket[1];
+								byte[] theolddest= new byte[2];
+								byte[] theoldsrc= new byte[2];
+								byte[] thecrcarray= new byte[4];
+								byte[] thetemparray = new byte[6];
 
-                                BigInteger bi = new BigInteger(theackpacket);
-								System.out.println(bi.toString(2));
-                            
-								LinkLayer.diagOut("it should be sending an ack");
+
+								theoldsrc[0]=theackpacket[2];
+								theoldsrc[1]= theackpacket[3];
+								theolddest[0]=theackpacket[4];
+								theolddest[1]= theackpacket[5];
+								theackpacket = new byte[10];
+								theackpacket[0]=ackthing[0];
+								theackpacket[1]=ackthing[1];
+								theackpacket[2]=theolddest[0];
+								theackpacket[3]=theolddest[1];
+								theackpacket[4]=theoldsrc[0];
+								theackpacket[5]=theoldsrc[1];
+								//now copy into the temporary array
+								System.arraycopy(theackpacket, 0, thetemparray, 0, 6);
+								//update the CRC
+								crcVal.update(thetemparray,0,thetemparray.length);
+								thecrcarray = BuildPacket.bitshiftcrc(crcVal.getValue());
+								//add the CRC to the ACK packet
+								theackpacket[6]=thecrcarray[0];
+								theackpacket[7]=thecrcarray[1];
+								theackpacket[8]=thecrcarray[2];
+								theackpacket[9]=thecrcarray[3];
+
+								LinkLayer.diagOut("Receive Thread - Built the ACK and is now sending it");
 								if(theRF.getIdleTime()<100){
-									System.out.println("i am in the if");
-									theRF.transmit(theackpacket);
-									LinkLayer.diagOut("it should have sent an ack");
-									
-									LinkLayer.diagOut("the address that it is from is "+BuildPacket.retSrcAd(theackpacket)+ "   the Adress it is to "+BuildPacket.retDestAd(theackpacket));
+									//The RF is available
+									theRF.transmit(theackpacket); //send the ACK
+									LinkLayer.diagOut("Receive Thread - Sent the ACK to "+BuildPacket.retSrcAd(theackpacket));
+									//remove the now ACKed packet from our sequence number table
 									if(recRetry==0)
-									{
+									{ //this was the first time we saw the packet
 										short temp1 =theRTable.get(recSrcAdd);
 										theRTable.remove(recSrcAdd);
-
 										theRTable.put(recSrcAdd,(short) (temp1+1) );
 									}
-
-
 								}
+								
+								
 								if(BuildPacket.rcvACK.get()){
 									//ACK packet!
-									//it is an ACK
-									LinkLayer.diagOut("Received an ACK packet.");
-									//NEED TO CLEAR OUT ARRAY BLOCKING QUEUE using SeqNum
-								}
-								if(BuildPacket.rcvBeacon.get()){
-									//it is a Beacon packet
-									System.out.println("Received a Beacon packet.");
-
-
+									LinkLayer.diagOut("Receive Thread - Received an ACK packet.");
 								}
 								if(BuildPacket.rcvCTS.get()){
 									LinkLayer.diagOut("Received a CTS packet.");
@@ -241,11 +217,9 @@ public class Rthread implements Runnable {
 									recABQ.add(recData);
 									dataInQ = true;
 								}
-
 								//reset booleans
 								isData = false;
 							}
-
 						}
 					}
 					//reset for next received packet
@@ -260,7 +234,7 @@ public class Rthread implements Runnable {
 	 * A getter for the Link Layer return the first
 	 * byte array in the received Array Blocking Queue 
 	 * and removes it from the front.
-	 * @return
+	 * @return The byte array of the entire received packet.
 	 */
 	public byte[] getRecABQ(){
 		byte[] toPass = null;
@@ -269,16 +243,18 @@ public class Rthread implements Runnable {
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			//update status
+			LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 		}
-
-
-
 		return toPass;
 	}
 
 	/**
-	 * 
-	 * @return
+	 * Used in the Thread to see if there is data
+	 * to be received. Resets every time so it is
+	 * current.
+	 * @return True if data waiting. False if no
+	 * data waiting. 
 	 */
 	public boolean dataWaitinginQ(){
 
@@ -291,8 +267,9 @@ public class Rthread implements Runnable {
 	}
 
 	/**
-	 * 
-	 * @return
+	 * Gets the data from the ArrayBlocking Queue. To be
+	 * used by the Link Layer. 
+	 * @return Byte Array of the incoming data packet
 	 */
 	public byte[] getData(){
 		//
@@ -301,21 +278,25 @@ public class Rthread implements Runnable {
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			//update status
+			LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 		}
-		return null;
+		return null; //if things didn't work
 	}
 
 	/**
-	 * 
-	 * @return
+	 * Getter for other Classes.
+	 * @return Short value of the destination address of 
+	 * the received packet
 	 */
 	public short getDestAdd(){
 		return recDestAdd;
 	}
 
 	/**
-	 * 
-	 * @return
+	 * Getter for other Classes.
+	 * @return Short value of the source address of 
+	 * the received packet
 	 */
 	public short getSrcAdd(){
 		return recSrcAdd;

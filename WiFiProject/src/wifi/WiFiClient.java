@@ -212,6 +212,8 @@ public class WiFiClient implements ActionListener, Runnable {
                }
                else {
                   this.addText("That wasn't a valid address.\n");
+                //update status
+      			LinkLayer.setStatus.set(8);//BAD_MAC_ADDRESS
                }
             }
             else {
@@ -408,6 +410,8 @@ public class WiFiClient implements ActionListener, Runnable {
       } catch (Exception e1) {
          System.err.println("Yikes!  Something went wrong when invoking WiFiClient's run() method:");
          e1.printStackTrace();
+       //update status
+		LinkLayer.setStatus.set(3);//RF_INIT_FAILED
       }
       
       // Remind the user how to modify buttons

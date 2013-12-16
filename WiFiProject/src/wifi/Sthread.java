@@ -1,10 +1,10 @@
 package wifi;
 
-import java.lang.reflect.Array;
-import java.math.BigInteger;
+//import java.lang.reflect.Array;
+//import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
+//import java.nio.ByteOrder;
+//import java.nio.IntBuffer;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.zip.CRC32;
@@ -13,13 +13,18 @@ import java.util.zip.Checksum;
 import rf.RF;
 
 /**
- *
- * @author lswanson
+ * This is a Thread that run and continuously checks to 
+ * see if there are packets waiting to be sent. This 
+ * also handles the calling of methods to build packets
+ * and also waits for ACKs on sent packets. The thread uses
+ * proper wait and back offs as outlined in the 802.11~ protocol.
+ * @author Lauren Swanson & Eli Spiegel
+ * @version 12/15/13
  *
  */
 public class Sthread implements Runnable {
 
-	private  byte[] packet;
+	//private  byte[] packet; ********************
 	private  RF theRF;
 	//array for packets to be sent
 	private ArrayBlockingQueue <byte []> ablockQSent;
@@ -44,26 +49,18 @@ public class Sthread implements Runnable {
 	//time since last beacon
 	private long lastBeacon;
 	//blank byte array for Beacons (long value 0, 128 bits)
-	private byte [] blankBeacon = new byte[8];
+	//private byte [] blankBeacon = new byte[8];*********************
 	//for sending a beacon only once
 	private boolean sendingBeacon = false;
-	private Checksum crcVal = new CRC32();
-	boolean firstTime = true;
-	//need an array for addresses and sequence numbers
-	//the order of packets interchanging with each address
-	//increments on sending new packets
-
-	//need an array to hold sent packets until they've been acked
-	//order my seq num and address
-
+	private Checksum crcVal = new CRC32(); //Where do we use this?*************
+	boolean firstTime = true; //just starting the thread
 
 	/**
-	 * Another constructor for the sending thread.
+	 * Constructor which gets the ArrayBlocking Queue of things to send
+	 * and the RF layer that we are using
 	 *
-	 * @param packet data to be sent
-	 * @param dest destination address
-	 * @param theRF the RF layer we're using
-	 * @param abq the array blocking queue to hold the sent packet
+	 * @param theRF The RF layer we're using
+	 * @param abq The array blocking queue to hold the sent packet
 	 */
 	public Sthread( RF theRF, ArrayBlockingQueue abq)
 	{
@@ -72,7 +69,7 @@ public class Sthread implements Runnable {
 		this.theRF=theRF;
 		difs =5000;//is this right?
 		sifs = theRF.aSIFSTime;
-		slotTime = theRF.aSlotTime;
+		slotTime = theRF.aSlotTime; //WE NEED TO FIGURE OUT WHERE TO USE THIS or if we use something else****
 		retryLimit = theRF.dot11RetryLimit;
 		maxPacketLength = theRF.aMPDUMaximumLength;
 		sendTime = 0;
@@ -88,41 +85,31 @@ public class Sthread implements Runnable {
 	 * printing periodically as it goes.
 	 */
 	public void run() {
-		LinkLayer.diagOut("send is alive and well");
+		LinkLayer.diagOut("Send Thread - send is alive and well");
 
-		boolean busy = false; //for checking ability to send
+		boolean busy = false; //used for checking ability to send
 		boolean notACKed = true;
+		
 		if(firstTime){
+			//send a beacon on the first time
 			if(((theRF.clock()+Rthread.fudge.get()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
-				//send another beacon
+				//conditions make sure we haven't just sent a beacon and the 
+				//that it is a beacon (going to everyone)
 				sendingBeacon = true;
-				//give to BuildPacket
-				byte[] temp = new byte[8];
+				byte[] temp = new byte[8]; //to hold our timestamp
 				byte[] beacon = BuildPacket.build(ByteBuffer.wrap(temp).putLong(theRF.clock()+(long)9010 + Rthread.fudge.get()).array(),(short) -1, LinkLayer.ourMAC, (short)16384);
-
-				//adding the current local time ***added time to create and transmit****
-				System.out.println("Sending a BEACON!");
-				System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
-				theRF.transmit(beacon);
-				//start timer 
+				LinkLayer.diagOut("Send Thread - Sending our start-up BEACON!");
+				theRF.transmit(beacon);//send the beacon
+				//start timer to know when to send the next beacon
 				lastBeacon = theRF.clock()+Rthread.fudge.get();
-				//reset destination add for further use
-				firstTime=false;
-			
-				
+				//reset boolean so we don't keep sending
+				firstTime=false;	
 			}
 		}
-		/*//*****TIMING TEST****
-		//loop to make sure both clocks are running
-		long timer = theRF.clock();
-		while((theRF.clock() - timer)<5000){
-			//wait five seconds
-			System.out.println("The current clock is: " + theRF.clock());
-		}
-		 */
+		
 		while(true){
 
-			beaconFreq = LinkLayer.setBeacFreq;
+			beaconFreq = LinkLayer.setBeacFreq; //begins at 30sec
 
 			if(!ablockQSent.isEmpty()){
 				//something wanting to be sent
@@ -133,58 +120,52 @@ public class Sthread implements Runnable {
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+					//update status
+					LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 				}
 			}
-
-			//sending beacons
 			
-
-
-			//as long as there is something to send
+			//as long as there is something to send and we aren't currently sending a beacon
 			while(!abqSendAck.isEmpty() && !sendingBeacon){
 				
 				if(((theRF.clock()+Rthread.fudge.get()-lastBeacon) > beaconFreq) || BuildPacket.shtSendDestAdd == -1){
-					//send another beacon
+					//time to send another beacon or BCast
 					sendingBeacon = true;
-					//give to BuildPacket
+					//get the adjusted time to put in our timestamp
 					byte[] ourtime = BuildPacket.bitshifttime(theRF.clock()+(long)9010 + Rthread.fudge.get());
+					//build our beacon
 					byte[] beacon = BuildPacket.build(ourtime,(short) -1, LinkLayer.ourMAC, (short)16384);
-					
-					//adding the current local time ***added time to create and transmit****
 				
-					System.out.println("Sending a BEACON!");
-					System.out.println("The current local time is: " + theRF.clock()+Rthread.fudge.get());
-					theRF.transmit(beacon);
-					//start timer 
-					lastBeacon = theRF.clock()+Rthread.fudge.get();
-					//reset destination add for further use
-					byte [] blah = new byte[1];
-				
+					LinkLayer.diagOut("Send Thread - Sending a BEACON!");//diagnostics
+					theRF.transmit(beacon);//sent it 
+					lastBeacon = theRF.clock()+Rthread.fudge.get();//start timer
+					//set the retrys so we will hit the limit and not wait for ACKs on the beacons
 					numRetry = 5;
 				}
 				/*
-				 * as long as we haven't hit the retry limit, been acked,
+				 * as long as we haven't hit the retry limit, been ACKed,
 				 * or haven't increased the expBackOff too much...
 				 */
 				while(numRetry<retryLimit && notACKed && (expBackOff<maxCWin)){	
 
-					//if it is a beacon we only need to send it once
+					//if it is a beacon make sure we only send it once. 
 					if(sendingBeacon == true){
 						//set the numRetry so we won't keep sending
 						numRetry = retryLimit;
 						//reset the boolean
 						sendingBeacon = false;
-
 					}
 
-					//do we need to flip the retry bit
-					if(numRetry==1){
+					//do we need to flip the retry bit?
+					if(numRetry==1){//yep!
 						byte[] wholePacket = new byte[2048];
 						try {
 							wholePacket = abqSendAck.take();
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
+							//update status
+							LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 						}
 						byte firstByte = wholePacket[0];
 						//AND the first byte to flip the retry bit
@@ -212,7 +193,7 @@ public class Sthread implements Runnable {
 									//the packet is for us and 
 									//is responding to the packet we just sent
 									notACKed = false;
-									LinkLayer.diagOut("SendThread recognizes ack.");
+									LinkLayer.diagOut("Send Thread - We recognize the ACK!");
 									//update status
 									LinkLayer.setStatus.set(4); //TX_DELIVERED
 									//stop the time
@@ -224,6 +205,8 @@ public class Sthread implements Runnable {
 									} catch (InterruptedException e) {
 										// TODO Auto-generated catch block
 										e.printStackTrace();
+										//update status
+										LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 									}
 								}
 								//not the right seqNum
@@ -237,6 +220,8 @@ public class Sthread implements Runnable {
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
+							//update status
+							LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 						}
 					}
 
@@ -245,81 +230,79 @@ public class Sthread implements Runnable {
 
 						if(theRF.inUse()){
 							busy = true;
-							LinkLayer.diagOut("Medium is NOT idle.");
+							LinkLayer.diagOut("Send Thread - Medium is NOT idle.");
 
 							while(busy){
-								LinkLayer.diagOut("Wait until current transmission ends.");
+								LinkLayer.diagOut("Send Thread - Wait until current transmission ends.");
 								while(theRF.inUse()){
 									//wait until current transmission ends	
-									LinkLayer.diagOut("Waiting for transmission to end.");
+									LinkLayer.diagOut("Send Thread - Waiting for transmission to end.");
 								}
 								//not transmitting right now
 								busy = false;
 								//wait DIFS
 								if(theRF.getIdleTime() > difs+(50 - ((theRF.clock()+Rthread.fudge.get())%50)))
 								{
-									LinkLayer.diagOut("Waiting DIFS");
+									LinkLayer.diagOut("Send Thread - Waiting DIFS");
 									//Check if open
 									if(theRF.inUse()){
 										//the RF layer is busy
 										busy = true;
-										LinkLayer.diagOut("Medium is NOT still idle.");
+										LinkLayer.diagOut("Sent Thread - Medium is NOT still idle.");
 									}	
 								}
 							}
 							//The channel is open now
 
-							LinkLayer.diagOut("From SendThread(B) - Number of Retrys = " + numRetry);
+							LinkLayer.diagOut("Send Thread(B) - Number of Retrys = " + numRetry);
 
 							//wait exponential back-off time
 							if(theRF.getIdleTime() > (randExpoBack.nextInt((expBackOff*numRetry)+1))){
-								LinkLayer.diagOut("Wait exponential backoff time while medium idle.");
+								LinkLayer.diagOut("Send Thread -Wait exponential backoff time while medium idle.");
 								//send the data
 								theRF.transmit(abqSendAck.element());
 								numRetry = numRetry + 1; //count this retry
 								//record when it was sent
 								sendTime = theRF.clock()+Rthread.fudge.get();
-								LinkLayer.diagOut("Transmit Frame0: Sent Packet");
+								LinkLayer.diagOut("Send Thread - Transmit Frame0: Sent Packet");
 							}
 						}
 
 						//Medium IS idle
-
-						//wait IFS, Still idle?
-						//wait DIFS
+						//wait DIFS plus some
 						if(theRF.getIdleTime() > difs+((theRF.clock()+Rthread.fudge.get())%50))
 						{
-							LinkLayer.diagOut("Waiting DIFS");
+							LinkLayer.diagOut("Send Thread - Waiting DIFS");
 
 							//Check if open
 							if(theRF.inUse()){
 								//the RF layer is busy
 								busy = true;
-								LinkLayer.diagOut("Medium is NOT idle anymore.");
+								LinkLayer.diagOut("Send Thread - Medium is NOT idle anymore.");
 
 								while(busy){
-									LinkLayer.diagOut("Wait until current transmission ends.");
+									LinkLayer.diagOut("Send Thread - Wait until current transmission ends.");
 									while(theRF.inUse()){
 										//wait until current transmission ends	
-										LinkLayer.diagOut("Waiting for transmission to end.");
+										LinkLayer.diagOut("Send Thread - Waiting for transmission to end.");
 									}
 									//not transmitting right now
 									busy = false;
 									//wait DIFS
 									if(theRF.getIdleTime() > difs+(50-((theRF.clock()+Rthread.fudge.get())%50)))
 									{
-										LinkLayer.diagOut("Waiting DIFS");
+										LinkLayer.diagOut("Send Thread - Waiting DIFS");
 										//Check if open
 										if(theRF.inUse()){
 											//the RF layer is busy
 											busy = true;
-											LinkLayer.diagOut("Medium is NOT still idle.");
+											LinkLayer.diagOut("Send Thread - Medium is NOT still idle.");
 										}	
 									}
 								}
 								//The channel is open now
 
-								LinkLayer.diagOut("From SendThread(C) - Number of Retrys = " + numRetry);
+								LinkLayer.diagOut("Send Thread(C) - Number of Retrys = " + numRetry);
 
 								//wait exponential back-off time
 
@@ -331,6 +314,8 @@ public class Sthread implements Runnable {
 									} catch (InterruptedException e) {
 										// TODO Auto-generated catch block
 										e.printStackTrace();
+										//update status
+										LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 									}
 								}else{
 									//pick the greatest (expbackoff)
@@ -339,10 +324,12 @@ public class Sthread implements Runnable {
 									} catch (InterruptedException e) {
 										// TODO Auto-generated catch block
 										e.printStackTrace();
+										//update status
+										LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 									}
 								}
 
-								LinkLayer.diagOut("Waited exponential backoff time while medium idle.");
+								LinkLayer.diagOut("Send Thread - Waited exponential backoff time while medium idle.");
 								//for next window size
 								expBackOff = expBackOff *2;
 								//send the data
@@ -350,29 +337,29 @@ public class Sthread implements Runnable {
 								numRetry = numRetry + 1; //count this retry
 								//record when it was sent
 								sendTime = theRF.clock()+Rthread.fudge.get();
-								LinkLayer.diagOut("Transmit Frame1: Sent Packet");
+								LinkLayer.diagOut("Send Thread - Transmit Frame1: Sent Packet");
 
 
 
 							}
 
-							LinkLayer.diagOut("The Medium is still idle.");
+							LinkLayer.diagOut("Send Thread - The Medium is still idle.");
 							//send the data
 							theRF.transmit(abqSendAck.element());
 							//record when it was sent
 							sendTime = theRF.clock()+Rthread.fudge.get();
-							LinkLayer.diagOut("Transmit Frame2: Sent Packet");
+							LinkLayer.diagOut("Send Thread - Transmit Frame2: Sent Packet");
 							numRetry = numRetry + 1;
 						}
 
 
 					}
-					LinkLayer.diagOut("Number of Retrys in Send: " + numRetry);
+					LinkLayer.diagOut("Send Thread - Number of Retrys: " + numRetry);
 				}
 
 				//check if we have hit the retry limit
 				if(numRetry >= retryLimit){
-					LinkLayer.diagOut("Hit retry limit.");
+					LinkLayer.diagOut("Send Thread - Hit retry limit.");
 					//we need to stop trying to send this packet
 					//and remove it from the ArrayBlockingQueue
 					numRetry = 0;
@@ -381,6 +368,8 @@ public class Sthread implements Runnable {
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
+						//update status
+						LinkLayer.setStatus.set(2);//UNSPECIFIED ERROR
 					}
 					//then we should reset the numRetry
 					
